@@ -1,0 +1,187 @@
+{
+    "name": "N8N Playwright Automation (Complete)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "When clicking \"Execute Workflow\"",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { json: { folder: \"ERP\" } },\n  { json: { folder: \"CampAccomodation\" } }\n];"
+            },
+            "id": "suite",
+            "name": "Choose Suite",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "// @ts-nocheck\nconst cp = require('child_process');\nconst results = [];\nconst items = $input.all();\nconst root = 'C:/Users/veeramani/desktop/playwright-mcp';\n\nfor (const item of items) {\n  const folder = item.json.folder;\n  const cmd = `dir /b \"tests\\\\${folder}\\\\*.spec.js\"`;\n  try {\n    const out = cp.execSync(cmd, { cwd: root }).toString();\n    const files = out.split(/\\r?\\n/).filter(f => f.trim().length > 0);\n    for (const file of files) {\n      results.push({\n        json: {\n          filename: file,\n          folder: folder\n        }\n      });\n    }\n  } catch (err) {\n    // Skip erroring folders\n  }\n}\n\nif (results.length === 0) {\n  return [{ json: { error: \"No tests found\", status: \"error\" } }];\n}\n\nreturn results;"
+            },
+            "id": "find",
+            "name": "Find Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "loop",
+            "name": "Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "// @ts-nocheck\nconst cp = require('child_process');\nconst f = $input.item.json.folder;\nconst s = $input.item.json.filename;\nconst cmd = `npx playwright test \"tests/${f}/${s}\" --headless`;\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\n\ntry {\n  const out = cp.execSync(cmd, { cwd: cwd, timeout: 300000 }).toString();\n  return {\n    json: {\n      status: 'passed',\n      output: out,\n      file: s\n    }\n  };\n} catch (e) {\n  return {\n    json: {\n      status: 'failed',\n      output: String(e),\n      file: s\n    }\n  };\n}"
+            },
+            "id": "run",
+            "name": "Execute Playwright (JS)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "general",
+                "text": "={{ '🧪 *Test:* ' + $json.file + '\\n' + '*Result:* ' + ($json.status === 'passed' ? '✅ Passed' : '❌ Failed') + '\\n\\n' + '```\\n' + ($json.output || \"Check Terminal\").substring(0, 400) + '\\n```' }}"
+            },
+            "id": "slack",
+            "name": "Slack Update",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "🚨 Playwright Failure: {{ $json.file }}",
+                "emailType": "html",
+                "text": "={{ '<h3>🚀 Automation Failure Alert</h3><p>Script: <b>' + $json.file + '</b></p><p>Status: <span style=\"color:red;\">FAILED</span></p><p>Check Slack for full logs.</p>' }}"
+            },
+            "id": "gmail",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "When clicking \"Execute Workflow\"": {
+            "main": [
+                [
+                    {
+                        "node": "Choose Suite",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Choose Suite": {
+            "main": [
+                [
+                    {
+                        "node": "Find Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Execute Playwright (JS)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Execute Playwright (JS)": {
+            "main": [
+                [
+                    {
+                        "node": "Slack Update",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Gmail Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Slack Update": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

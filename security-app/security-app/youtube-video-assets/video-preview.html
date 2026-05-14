@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecValid AI - 10 Min Deep Dive Generator</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #9333ea;
+            --secondary: #3b82f6;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --bg: #030014;
+            --accent: #a78bfa;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        #video-stage {
+            width: 1920px;
+            height: 1080px;
+            background: radial-gradient(circle at center, #1a0b36 0%, #030014 100%);
+            position: relative;
+            transform: scale(0.6);
+            transform-origin: center;
+            border: 2px solid var(--glass-border);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 80px;
+            animation: fadeIn 1s forwards;
+        }
+
+        .scene.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Typography */
+        h1 {
+            font-family: 'Outfit';
+            font-size: 120px;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-family: 'Outfit';
+            font-size: 60px;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        p {
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 1200px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* UI Components */
+        .dashboard-mock {
+            width: 1400px;
+            height: 700px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 40px;
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--glass-border);
+            padding-right: 20px;
+        }
+
+        .nav-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .main-content {
+            position: relative;
+        }
+
+        .risk-gauge {
+            width: 300px;
+            height: 300px;
+            border: 20px solid var(--glass-border);
+            border-top-color: var(--danger);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 80px;
+            font-weight: 800;
+            font-family: 'Outfit';
+        }
+
+        /* Code Blocks */
+        .code-window {
+            background: #000;
+            border-radius: 20px;
+            padding: 30px;
+            width: 1000px;
+            border: 1px solid var(--glass-border);
+            text-align: left;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            font-size: 28px;
+            color: #a78bfa;
+        }
+
+        .vuln-highlight {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 5px solid var(--danger);
+            padding: 5px 15px;
+            margin: 10px 0;
+        }
+
+        /* Timer/Progress */
+        .progress-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+        }
+
+        #time-overlay {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            font-size: 40px;
+            font-family: 'Fira Code';
+            color: var(--accent);
+        }
+
+        /* Scans */
+        .scan-beam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--primary);
+            box-shadow: 0 0 20px var(--primary);
+            z-index: 100;
+            display: none;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            z-index: 1000;
+            transform: scale(1.5);
+        }
+
+        button {
+            padding: 20px 40px;
+            background: var(--primary);
+            border: none;
+            border-radius: 15px;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 10px 30px rgba(147, 51, 234, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="video-stage">
+        <div id="time-overlay">00:00</div>
+        <div class="scan-beam" id="beam"></div>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <!-- 0:00 - 1:00 INTRODUCTION -->
+        <div class="scene" id="scene-0">
+            <div style="font-size: 200px; color: var(--primary);"><i data-lucide="shield-check" size="200"></i></div>
+            <h1>SecValid AI</h1>
+            <p>The 10-Minute Deep Dive into Autonomous Security Validation</p>
+            <div style="margin-top: 40px; display: flex; gap: 20px;">
+                <span style="background: var(--glass); padding: 10px 20px; border-radius: 10px;">Gemini 2.0 Flash</span>
+                <span style="background: var(--glass); padding: 10px 20px; border-radius: 10px;">Next.js 15</span>
+                <span style="background: var(--glass); padding: 10px 20px; border-radius: 10px;">Zero-Trust</span>
+            </div>
+        </div>
+
+        <!-- 1:00 - 2:30 ARCHITECTURE -->
+        <div class="scene" id="scene-1">
+            <h2>The Hybrid Analysis Ecosystem</h2>
+            <div class="dashboard-mock">
+                <div class="sidebar">
+                    <div class="nav-item active">Architecture</div>
+                    <div class="nav-item">Streams</div>
+                    <div class="nav-item">Orchestration</div>
+                </div>
+                <div class="main-content"
+                    style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <div style="display:flex; gap: 50px;">
+                        <div style="text-align:center;"><i data-lucide="activity" size="80"></i>
+                            <h3>9 Total Scans</h3>
+                        </div>
+                        <div style="text-align:center;"><i data-lucide="alert-triangle" size="80"></i>
+                            <h3>6 Critical</h3>
+                        </div>
+                        <div style="text-align:center;"><i data-lucide="shield" size="80"></i>
+                            <h3>40% Score</h3>
+                        </div>
+                    </div>
+                    <p style="margin-top: 40px;">Real-time analysis of your security posture across multiple targets.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2:30 - 4:30 OWASP DEEP DIVE -->
+        <div class="scene" id="scene-2">
+            <h2>OWASP A03: Injection Defects</h2>
+            <div class="code-window">
+                <code>// Dangerous Implementation</code>
+                <div class="vuln-highlight">
+                    <code>const user = await db.query("SELECT * FROM users WHERE id = '" + req.body.id + "'");</code>
+                </div>
+                <code>// SecValid AI Recommendation:</code>
+                <code
+                    style="color: var(--success);">const user = await db.query("SELECT * FROM users WHERE id = ?", [req.body.id]);</code>
+            </div>
+            <div style="margin-top: 50px; display: flex; gap: 40px;">
+                <div class="risk-gauge">85%</div>
+                <div style="text-align: left;">
+                    <h3 style="color: var(--danger);">CRITICAL VULNERABILITY FOUND</h3>
+                    <p style="text-align: left;">SQL Injection path detected via req.body.id</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4:30 - 6:00 COMPLIANCE -->
+        <div class="scene" id="scene-3">
+            <h2>GDPR & PCI-DSS Compliance</h2>
+            <div class="dashboard-mock">
+                <div class="sidebar">
+                    <div class="nav-item active">Legal Audit</div>
+                    <div class="nav-item">Data Privacy</div>
+                </div>
+                <div class="main-content">
+                    <div style="font-size: 24px;">
+                        <div style="margin-bottom: 20px; color: var(--danger);"><i data-lucide="x-circle"></i> Missing
+                            Cookie Consent Banner</div>
+                        <div style="margin-bottom: 20px; color: var(--danger);"><i data-lucide="x-circle"></i> No 'Right
+                            to Erasure' clause in Policy</div>
+                        <div style="margin-bottom: 20px; color: var(--success);"><i data-lucide="check-circle"></i>
+                            Payment Form Encryption (AES-256)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6:00 - 7:30 API SECURITY -->
+        <div class="scene" id="scene-4">
+            <h2>Shadow API & Secrets Detection</h2>
+            <div style="display: flex; gap: 60px;">
+                <div class="example-card"
+                    style="background:var(--glass); padding: 40px; border-radius: 20px; border: 1px solid var(--danger);">
+                    <h3 style="color: var(--danger);">EXPOSED SECRET</h3>
+                    <code>STRIPE_SK = "sk_live_51M..."</code>
+                </div>
+                <div class="example-card"
+                    style="background:var(--glass); padding: 40px; border-radius: 20px; border: 1px solid var(--accent);">
+                    <h3>API ENDPOINTS</h3>
+                    <code>/api/v1/users (GET)</code><br>
+                    <code>/api/v1/admin (POST) - SECURE</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7:30 - 9:00 FALLBACK SYSTEM -->
+        <div class="scene" id="scene-5">
+            <h2>Self-Healing AI Infrastructure</h2>
+            <div
+                style="position: relative; width: 800px; height: 400px; border: 2px dashed var(--glass-border); border-radius: 20px; display: flex; justify-content: center; align-items: center;">
+                <div id="routing-dot"
+                    style="position: absolute; width: 30px; height: 30px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 20px var(--primary);">
+                </div>
+                <div style="display: flex; gap: 100px;">
+                    <div style="text-align:center;"><i data-lucide="zap" size="60"></i>
+                        <p>Gemini Flash</p>
+                    </div>
+                    <div style="text-align:center; color: var(--danger);"><i data-lucide="alert-octagon" size="60"></i>
+                        <p>API DOWN</p>
+                    </div>
+                    <div style="text-align:center;"><i data-lucide="shield" size="60"></i>
+                        <p>Pro Fallback</p>
+                    </div>
+                </div>
+            </div>
+            <p style="margin-top: 30px;">Routing: 429 Quota Exceeded -> Switching to Gemini 1.5 Pro</p>
+        </div>
+
+        <!-- 9:00 - 10:00 OUTRO -->
+        <div class="scene" id="scene-6">
+            <div style="font-size: 150px; color: var(--success);"><i data-lucide="award" size="150"></i></div>
+            <h1>SecValid AI</h1>
+            <p>Intelligence Validated. Your Security, Reimagined.</p>
+            <h2 style="margin-top: 40px;">Download the Full Report Now</h2>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="playBtn" onclick="runExtendedVideo()">START 10-MIN DEEP DIVE</button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const scenes = document.querySelectorAll('.scene');
+        const progress = document.getElementById('progress-bar');
+        const timeOverlay = document.getElementById('time-overlay');
+        const beam = document.getElementById('beam');
+
+        // Extended timings in milliseconds (scaled for preview but script represents 10 mins)
+        // For the 10 min feel, each 1 min is represented by 10 seconds in this interactive demo
+        const chapters = [
+            { duration: 10000, start: "0:00" }, // Intro
+            { duration: 15000, start: "1:00" }, // Arch
+            { duration: 20000, start: "2:30" }, // OWASP
+            { duration: 15000, start: "4:30" }, // Compliance
+            { duration: 15000, start: "6:00" }, // API
+            { duration: 15000, start: "7:30" }, // Fallback
+            { duration: 10000, start: "9:00" }  // Outro
+        ];
+
+        async function runExtendedVideo() {
+            document.getElementById('playBtn').style.display = 'none';
+            beam.style.display = 'block';
+
+            let totalElapsed = 0;
+            const totalDuration = chapters.reduce((a, b) => a + b.duration, 0);
+
+            const riskDisplay = document.querySelector('.risk-gauge');
+
+            for (let i = 0; i < chapters.length; i++) {
+                scenes.forEach(s => s.classList.remove('active'));
+                scenes[i].classList.add('active');
+
+                if (i === 2) { // Animate risk on OWASP scene
+                    let score = 0;
+                    const int = setInterval(() => {
+                        score++;
+                        if (riskDisplay) riskDisplay.innerText = score + "%";
+                        if (score >= 40) clearInterval(int);
+                    }, 50);
+                }
+
+                timeOverlay.innerText = chapters[i].start;
+
+                const start = Date.now();
+                while (Date.now() - start < chapters[i].duration) {
+                    const sceneElapsed = Date.now() - start;
+                    const overallPct = ((totalElapsed + sceneElapsed) / totalDuration) * 100;
+                    progress.style.width = overallPct + '%';
+
+                    // Virtual time clock update (simulation)
+                    const virtualSeconds = Math.floor((totalElapsed + sceneElapsed) / 1000) * 6; // Scale x6
+                    const mins = Math.floor(virtualSeconds / 60);
+                    const secs = virtualSeconds % 60;
+                    timeOverlay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                totalElapsed += chapters[i].duration;
+            }
+
+            beam.style.display = 'none';
+            document.getElementById('playBtn').style.display = 'block';
+            document.getElementById('playBtn').innerText = 'REPLAY SESSION';
+        }
+
+        function animateRisk() {
+            let current = 0;
+            const target = 40; // Updated to match user's actual 40% score
+            const int = setInterval(() => {
+                current++;
+                riskDisplay.innerText = `Security Score: ${current}%`;
+                if (current >= target) clearInterval(int);
+            }, 50);
+        }
+    </script>
+</body>
+
+</html>

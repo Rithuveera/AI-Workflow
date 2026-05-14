@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Performance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --primary: #38bdf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .card h3 { margin: 0; font-size: 14px; opacity: 0.7; }
+        .card .value { font-size: 28px; font-weight: bold; margin-top: 10px; color: var(--primary); }
+        .chart-container { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 30px; height: 350px; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #334155; color: var(--primary); }
+        .status-pass { color: var(--success); font-weight: bold; }
+        .status-fail { color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 NFC Performance Dashboard</h1>
+        <div>Generated: 2026-05-14 12:46:11</div>
+    </div>
+
+    <div class="grid">
+        <div class="card"><h3>Total Requests</h3><div class="value">900</div></div>
+        <div class="card"><h3>Success Rate</h3><div class="value" style="color: var(--success)">100.0%</div></div>
+        <div class="card"><h3>Avg Latency</h3><div class="value">20.54ms</div></div>
+        <div class="card"><h3>Throughput</h3><div class="value">1.97 r/s</div></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <div class="chart-container"><canvas id="latencyChart"></canvas></div>
+        <div class="chart-container"><canvas id="successChart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h3>Site Detail Breakdown</h3>
+        <table style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>Site Label</th>
+                    <th>Total</th>
+                    <th>Passed</th>
+                    <th>Success Rate</th>
+                    <th>Avg Latency</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>Minning</td>
+                    <td>300</td>
+                    <td>300</td>
+                    <td class="status-pass">100.0%</td>
+                    <td>20.06ms</td>
+                </tr>
+                <tr>
+                    <td>Technopark Software Project Phase1 - Trivendrum So</td>
+                    <td>300</td>
+                    <td>300</td>
+                    <td class="status-pass">100.0%</td>
+                    <td>20.77ms</td>
+                </tr>
+                <tr>
+                    <td>Habshan</td>
+                    <td>300</td>
+                    <td>300</td>
+                    <td class="status-pass">100.0%</td>
+                    <td>20.80ms</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const ctxL = document.getElementById('latencyChart').getContext('2d');
+        new Chart(ctxL, {
+            type: 'bar',
+            data: {
+                labels: ['Minning', 'Technopark Software Project Phase1 - Trivendrum So', 'Habshan'],
+                datasets: [{
+                    label: 'Avg Latency (ms)',
+                    data: [20.055018000020937, 20.773736333333847, 20.802601333331648],
+                    backgroundColor: ['#38bdf8', '#22c55e', '#8b5cf6'],
+                    borderRadius: 6
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Site Latency (ms)', color: '#fff' } }, scales: { y: { grid: { color: '#334155' } } } }
+        });
+
+        const ctxS = document.getElementById('successChart').getContext('2d');
+        new Chart(ctxS, {
+            type: 'doughnut',
+            data: {
+                labels: ['Minning', 'Technopark Software Project Phase1 - Trivendrum So', 'Habshan'],
+                datasets: [{
+                    data: [100.0, 100.0, 100.0],
+                    backgroundColor: ['#38bdf8', '#22c55e', '#8b5cf6']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Success Rates (%)', color: '#fff' } } }
+        });
+    </script>
+</body>
+</html>

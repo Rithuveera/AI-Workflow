@@ -1,0 +1,52 @@
+[
+    {
+        "startTime": 0,
+        "endTime": 7,
+        "theme": "hero"
+    },
+    {
+        "startTime": 7,
+        "endTime": 14,
+        "theme": "problem"
+    },
+    {
+        "startTime": 14,
+        "endTime": 22,
+        "theme": "solution"
+    },
+    {
+        "startTime": 22,
+        "endTime": 35,
+        "theme": "owasp"
+    },
+    {
+        "startTime": 35,
+        "endTime": 48,
+        "theme": "compliance"
+    },
+    {
+        "startTime": 48,
+        "endTime": 60,
+        "theme": "api-privacy"
+    },
+    {
+        "startTime": 60,
+        "endTime": 72,
+        "theme": "hybrid-engine"
+    },
+    {
+        "startTime": 72,
+        "endTime": 82,
+        "theme": "reliability"
+    },
+    {
+        "startTime": 82,
+        "endTime": 92,
+        "theme": "reporting"
+    },
+    {
+        "startTime": 92,
+        "endTime": 100,
+        "theme": "outro"
+    }
+]

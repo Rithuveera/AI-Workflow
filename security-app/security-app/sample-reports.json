@@ -1,0 +1,38 @@
+[
+  {
+    "type": "Safe Site",
+    "url": "https://example.com",
+    "severity": "Safe",
+    "summary": "No security vulnerabilities found in the HTML source.",
+    "details": "The HTML source code of the example.com website does not contain any apparent security vulnerabilities. It is a static webpage with basic HTML structure and styling. There are no exposed secrets, insecure scripts, or sensitive information in comments. The meta tag for viewport is present, which is good for responsiveness. The content is a standard example domain page, as intended.",
+    "recommendation": "No changes needed. The page serves its intended purpose without introducing security risks.",
+    "affected_lines": null
+  },
+  {
+    "type": "Vulnerable Site",
+    "url": "http://testphp.vulnweb.com/",
+    "severity": "Medium",
+    "summary": "Test application is intentionally vulnerable and exposes hints to potential vulnerabilities.",
+    "details": "The page source contains a warning that the application is intentionally vulnerable to web attacks like SQL Injection, XSS, and CSRF. While not a vulnerability in itself, this significantly increases the likelihood of finding exploitable vulnerabilities.",
+    "recommendation": "Exercise caution when interacting with this application. Treat all inputs as potentially malicious and avoid entering sensitive information. Scan the application using security tools, and manually inspect the code and functionality for vulnerabilities.",
+    "affected_lines": "Entire page"
+  },
+  {
+    "type": "Simple Site",
+    "url": "https://blank.org/",
+    "severity": "Safe",
+    "summary": "No significant security vulnerabilities found in the HTML source.",
+    "details": "The HTML source appears to be a very basic and mostly empty page. It contains no scripts, exposed secrets, or comments with sensitive information. The use of deprecated HTML attributes like `bgcolor`, `text`, `link`, `vlink`, and `alink` does not represent a security vulnerability, but rather an outdated coding style.",
+    "recommendation": "While not a security issue, consider modernizing the HTML by using CSS for styling and ensuring proper meta tags for SEO and accessibility.",
+    "affected_lines": null
+  },
+  {
+    "type": "Backend Code (Node.js)",
+    "url": "Raw Code Snippet",
+    "severity": "High",
+    "summary": "SQL Injection vulnerability due to direct concatenation of user input in SQL query.",
+    "details": "The application directly concatenates user-supplied input (`req.query.username`) into an SQL query string. This allows an attacker to inject arbitrary SQL code by manipulating the `username` parameter. For example, a malicious user could provide a `username` like `' OR '1'='1`, which would result in the query `SELECT * FROM users WHERE name = '' OR '1'='1'`, effectively returning all users in the database. This vulnerability could lead to data breaches, modification, or deletion, and potentially even remote code execution, depending on the database system's configuration and permissions.",
+    "recommendation": "Use parameterized queries or prepared statements to prevent SQL injection. Replace the direct concatenation with a parameterized query where the user input is treated as data rather than executable code. For example, use `db.execute('SELECT * FROM users WHERE name = ?', [username], ...)` or a similar mechanism provided by your database library.",
+    "affected_lines": "6-12"
+  }
+]

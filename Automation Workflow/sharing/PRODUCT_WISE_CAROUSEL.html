@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Carousel - Premium Automation Deep Dive</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --bg: #020617;
+            --card-bg: rgba(15, 23, 42, 0.9);
+            --primary: #06b6d4;
+            --secondary: #6366f1;
+            --accent: #d946ef;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+        }
+
+        .slide {
+            width: 1080px;
+            height: 1080px;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto 50px auto;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+            padding: 90px 70px;
+        }
+
+        /* Ambient Glow Layer */
+        .ambient-glow {
+            position: absolute;
+            width: 900px;
+            height: 900px;
+            border-radius: 50%;
+            filter: blur(160px);
+            z-index: 0;
+            opacity: 0.2;
+        }
+
+        .glow-1 {
+            background: var(--primary);
+            top: -200px;
+            left: -200px;
+        }
+
+        .glow-2 {
+            background: var(--secondary);
+            bottom: -200px;
+            right: -200px;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 940px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .center {
+            align-items: center;
+            text-align: center;
+        }
+
+        .badge {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--primary);
+            padding: 12px 28px;
+            border-radius: 100px;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            margin-bottom: 45px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 102px;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.05;
+            background: linear-gradient(to bottom right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 72px;
+            font-weight: 800;
+            margin: 0 0 50px 0;
+            line-height: 1.1;
+            color: #fff;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-size: 36px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Mock Canvas CSS Diagram */
+        .mock-canvas {
+            width: 100%;
+            height: 540px;
+            margin-top: 60px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 40px;
+            border: 1px solid var(--border);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.6);
+        }
+
+        .canvas-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+            background-size: 30px 30px;
+            opacity: 0.5;
+        }
+
+        .node-flow {
+            position: relative;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .canvas-node {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            min-width: 220px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .canvas-node::after {
+            content: "";
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            width: 40px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            z-index: -1;
+        }
+
+        .canvas-node:last-child::after {
+            display: none;
+        }
+
+        .node-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: #000;
+        }
+
+        .node-label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Slide Content Cards */
+        .node-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .node-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            padding: 45px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .node-header {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+
+        .node-icon {
+            font-size: 42px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .node-title {
+            font-size: 42px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .node-body {
+            font-size: 30px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 60px;
+            left: 70px;
+            right: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border);
+            padding-top: 35px;
+        }
+
+        .brand {
+            font-weight: 800;
+            font-size: 28px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-dot {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 4px;
+            transform: rotate(45deg);
+        }
+
+        .page-num {
+            font-size: 40px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* UI Mock Elements */
+        .ui-mock {
+            margin-top: 30px;
+            background: #1e293b;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            font-family: 'Segoe UI', sans-serif;
+            text-align: left;
+        }
+
+        .chat-mock {
+            padding: 15px;
+            font-size: 14px;
+            color: #e2e8f0;
+        }
+
+        .chat-bubble {
+            background: #334155;
+            padding: 12px;
+            border-radius: 0 12px 12px 12px;
+            margin-bottom: 10px;
+        }
+
+        .chat-header {
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .gmail-mock {
+            background: #fff;
+            color: #333;
+            padding: 20px;
+        }
+
+        .gmail-header {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .gmail-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .gmail-stat {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            color: white;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .report-table th {
+            background: #f8f9fa;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .report-table td {
+            padding: 6px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-tag {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+        }
+
+        @media print {
+            body {
+                background: none;
+            }
+
+            .slide {
+                margin: 0;
+                page-break-after: always;
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SLIDE 1: COVER -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="ambient-glow glow-1"></div>
+        <div class="ambient-glow glow-2"></div>
+        <div class="content center">
+            <div class="badge">Enterprise QA Orchestration</div>
+            <h1>High-Fidelity<br>Automation Hub</h1>
+            <p style="margin-top: 30px; font-size: 42px; color: #fff;">Autonomous Playwright & n8n Pipeline</p>
+
+            <!-- High-Fidelity CSS Workflow Diagram (Zero Login Issues) -->
+            <div class="mock-canvas">
+                <div class="canvas-grid"></div>
+                <div class="node-flow">
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#ff6b6b">⚡</div>
+                        <div class="node-label">Manual/Schedule Trigger</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#ff9f43">⚙️</div>
+                        <div class="node-label">Select Product</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#54a0ff">📂</div>
+                        <div class="node-label">Find Files</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#1dd1a1">🔄</div>
+                        <div class="node-label">Test Loop</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#ee5253">🛠️</div>
+                        <div class="node-label">Playwright Runner</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#4834d4">💬</div>
+                        <div class="node-label">Google Chat Notif</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#eb4d4b">📧</div>
+                        <div class="node-label">Gmail Alert</div>
+                    </div>
+                    <div class="canvas-node">
+                        <div class="node-circle" style="background:#feca57">📊</div>
+                        <div class="node-label">Final Summary</div>
+                    </div>
+                </div>
+                <!-- Visual Connectors -->
+                <div
+                    style="position:absolute; top:50%; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.1); z-index:0;">
+                </div>
+            </div>
+            <p style="margin-top: 40px; font-size: 28px; font-family: 'Fira Code'; color: var(--primary);">Architecture:
+                Modular | Connectivity: Google Chat & Gmail</p>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> WORKFLOW ENGINE
+            </div>
+            <div class="page-num">01</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: STARTUP -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 1: Entry</div>
+            <h2>Intelligent Startup</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 5px solid var(--primary);">
+                    <div class="node-header">
+                        <div class="node-icon">⏰</div>
+                        <div class="node-title">Hybrid Triggering</div>
+                    </div>
+                    <div class="node-body">Supports both **Manual Execution** for on-demand testing and **Scheduled
+                        Triggering** every 2 hours for continuous CI/CD health monitoring.</div>
+                </div>
+                <div class="node-card" style="border-left: 5px solid var(--secondary);">
+                    <div class="node-header">
+                        <div class="node-icon">⚙️</div>
+                        <div class="node-title">Select Product</div>
+                    </div>
+                    <div class="node-meta">n8n-nodes-base.code (JavaScript)</div>
+                    <div class="node-body">The core "Cognitive Router". This JS-powered node swaps paths, environment
+                        variables, and reporting logic based on YOUR chosen product.</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> INITIALIZATION
+            </div>
+            <div class="page-num">02</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: ORCHESTRATION -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 2: Discovery</div>
+            <h2>Dynamic Discovery</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 10px solid var(--accent);">
+                    <div class="node-header">
+                        <div class="node-icon">📂</div>
+                        <div class="node-title">Find Test Files</div>
+                    </div>
+                    <div class="node-body">Scans the product folder and automatically identifies all .spec.js files,
+                        building the execution queue dynamically so no manual update is ever needed.</div>
+                </div>
+                <div class="node-card" style="border-left: 10px solid var(--success);">
+                    <div class="node-header">
+                        <div class="node-icon">🔄</div>
+                        <div class="node-title">Test Loop</div>
+                    </div>
+                    <div class="node-body">The flow controller. It ensures every discovered test is processed
+                        sequentially, managing batch state and perfect handoff to the execution engine.</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> ORCHESTRATION
+            </div>
+            <div class="page-num">03</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: ENGINE -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 3: Execution</div>
+            <h2>The Power Engine</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 10px solid #f43f5e;">
+                    <div class="node-header">
+                        <div class="node-icon">⚡</div>
+                        <div class="node-title">Execute Playwright</div>
+                    </div>
+                    <div class="node-body">The core execution hub. It spawns the Playwright browser runner, performs the
+                        actual product-wise tests, and captures real-time exit codes.</div>
+                </div>
+                <div class="node-body">Instant team feedback. Every test result (Pass/Fail) is instantly pushed to
+                    Google Chat with duration metrics and error logs.</div>
+
+                <!-- Integrated Google Chat Mock -->
+                <div class="ui-mock" style="width: 100%; max-width: 500px; border-left: 4px solid var(--primary);">
+                    <div class="chat-mock">
+                        <div class="chat-bubble">
+                            <div class="chat-header">🎯 Product: ERP</div>
+                            <div>🧪 Test File: <code>Cloning.spec.js</code></div>
+                            <div style="color: var(--success); font-weight: 700;">Status: ✅ PASSED</div>
+                            <div style="margin-top: 5px;">Stats: 3/3 passed | Duration: 108.9s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="brand">
+            <div class="brand-dot"></div> ENGINE ROOM
+        </div>
+        <div class="page-num">04</div>
+    </div>
+    </div>
+
+    <!-- SLIDE 5: RESILIENCE -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 4: Resilience</div>
+            <h2>Fault Tolerance</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 10px solid var(--primary);">
+                    <div class="node-header">
+                        <div class="node-icon">🛡️</div>
+                        <div class="node-title">Check Failure</div>
+                    </div>
+                    <div class="node-body">Intelligent evaluation logic. Detects problematic runs and decides whether to
+                        continue or escalate based on the severity of the failure.</div>
+                </div>
+                <div class="node-card" style="border-left: 10px solid var(--error);">
+                    <div class="node-header">
+                        <div class="node-icon">📜</div>
+                        <div class="node-title">Log To File</div>
+                    </div>
+                    <div class="node-body">Automatic auditing. Failures are seamlessly appended to a persistent Markdown
+                        report for historical analysis and long-term debugging.</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> RELIABILITY
+            </div>
+            <div class="page-num">05</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: MONITORING -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 5: Criticality</div>
+            <h2>Global Monitoring</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 10px solid var(--accent);">
+                    <div class="node-header">
+                        <div class="node-icon">📧</div>
+                        <div class="node-title">Gmail Alert</div>
+                    </div>
+                    <div class="node-body">High-priority escalation. For critical regressions, an HTML-formatted email
+                        is dispatched to stakeholders to ensure zero delay in fixes.</div>
+                </div>
+                <div class="node-body">Aggregates the entire suite run into a single data object, calculating
+                    success percentages and total duration for the final report.</div>
+
+                <!-- Integrated Gmail Summary Mock -->
+                <div class="ui-mock" style="width: 100%; border: none;">
+                    <div class="gmail-mock">
+                        <div class="gmail-header">🚀 ERP Test Summary</div>
+                        <div class="gmail-stat-grid">
+                            <div class="gmail-stat" style="background:#3498db">Files: 5</div>
+                            <div class="gmail-stat" style="background:#27ae60">Passed: 18</div>
+                            <div class="gmail-stat" style="background:#e74c3c">Failed: 0</div>
+                            <div class="gmail-stat" style="background:#f39c12">100%</div>
+                        </div>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>File</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Approved - List</td>
+                                    <td>Approve.spec.js</td>
+                                    <td><span class="status-tag" style="background:#e8f5e9;color:#2e7d32">passed</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Client Master - Add</td>
+                                    <td>Client.spec.js</td>
+                                    <td><span class="status-tag" style="background:#e8f5e9;color:#2e7d32">passed</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="brand">
+            <div class="brand-dot"></div> ANALYTICS
+        </div>
+        <div class="page-num">06</div>
+    </div>
+    </div>
+
+    <!-- SLIDE 7: VISUAL EVIDENCE -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content">
+            <div class="badge">Phase 6: Evidence</div>
+            <h2>Visual Traceability</h2>
+            <div class="node-container">
+                <div class="node-card" style="border-left: 10px solid var(--error);">
+                    <div class="node-header">
+                        <div class="node-icon" style="color:var(--error)">🚨</div>
+                        <div class="node-title">Failure Triage</div>
+                    </div>
+                    <div class="node-body">When regression occurs, the system provides a detailed error trace and
+                        attaches the visual proof automatically.</div>
+
+                    <!-- Integrated Failure Alert Mock -->
+                    <div class="ui-mock" style="width: 100%; border: none;">
+                        <div class="gmail-mock" style="background: #fffafa;">
+                            <div class="gmail-header" style="background:#d32f2f">🚨 Test Failure Alert</div>
+                            <div
+                                style="font-size: 13px; border-left: 3px solid #d32f2f; padding-left: 10px; margin-bottom:10px;">
+                                <div><strong>Product:</strong> ERP</div>
+                                <div><strong>File:</strong> <code>Order_Process.spec.js</code></div>
+                            </div>
+                            <div
+                                style="background:#f1f1f1; padding: 10px; border-radius: 4px; font-family:'Fira Code'; font-size:10px; color:#c62828;">
+                                Error: locator.click: Timeout 30000ms exceeded.
+                            </div>
+                            <div
+                                style="margin-top: 10px; text-align: center; border: 1px dashed #ccc; padding: 20px; color: #666; font-size: 12px;">
+                                🖼️ [ATTACHMENT: failure_screenshot.png]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> TRACEABILITY
+            </div>
+            <div class="page-num">07</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: FINAL DELIVERY -->
+    <div class="slide">
+        <div class="grid-overlay"></div>
+        <div class="content center">
+            <div class="badge">Phase 7: Conclusion</div>
+            <h2>Ultimate Delivery</h2>
+            <div class="node-card" style="width: 100%; border-left: 15px solid var(--success); text-align: left;">
+                <div class="node-header">
+                    <div class="node-icon" style="background: rgba(34, 197, 94, 0.1);">🚀</div>
+                    <div class="node-title">Google Chat Summary</div>
+                </div>
+                <div class="node-body" style="font-size: 34px;">The workflow closes by delivering a high-level analytics
+                    summary for the entire product suite. Actionable health data delivered exactly where your team
+                    lives in Google Chat.</div>
+            </div>
+            <p style="margin-top: 80px; color: #fff; font-weight: 800; font-size: 52px; letter-spacing: -0.03em;">One
+                Hub. Infinite Scale.</p>
+        </div>
+        <div class="footer">
+            <div class="brand">
+                <div class="brand-dot"></div> STABILITY
+            </div>
+            <div class="page-num">08</div>
+        </div>
+    </div>
+
+</body>
+
+</html>

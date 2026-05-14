@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QAutoX AI Carousel - Premium Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        :root {
+            --bg: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.3);
+            --secondary: #818cf8;
+            --secondary-glow: rgba(129, 140, 248, 0.3);
+            --accent: #f472b6;
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111827;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text);
+        }
+
+        .slide {
+            width: 1080px;
+            height: 1350px;
+            /* LinkedIn Portrait Aspect Ratio */
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto 50px auto;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.6);
+            padding: 100px 80px;
+        }
+
+        /* Rich Background Elements */
+        .glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(150px);
+            z-index: 0;
+            opacity: 0.35;
+        }
+
+        .glow-1 {
+            width: 800px;
+            height: 800px;
+            background: var(--primary);
+            top: -200px;
+            right: -200px;
+        }
+
+        .glow-2 {
+            width: 600px;
+            height: 600px;
+            background: var(--secondary);
+            bottom: -100px;
+            left: -100px;
+        }
+
+        .grid {
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 1;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .center {
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 88px;
+            font-weight: 800;
+            line-height: 1;
+            margin: 0;
+            background: linear-gradient(to bottom right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .highlight {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 68px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0 0 30px 0;
+            color: #fff;
+        }
+
+        p {
+            font-size: 38px;
+            line-height: 1.5;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Visual Components */
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 50px;
+            margin-top: 60px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            text-align: left;
+        }
+
+        .icon-box {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--primary-glow), var(--secondary-glow));
+            border-radius: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 60px;
+            width: 100%;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-value {
+            font-size: 72px;
+            font-weight: 800;
+            color: var(--primary);
+            font-family: 'Outfit';
+        }
+
+        .stat-label {
+            font-size: 24px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Steps */
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 36px;
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+
+        .step-content p {
+            font-size: 28px;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 60px;
+            left: 80px;
+            right: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        .brand {
+            font-family: 'Outfit';
+            font-weight: 800;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .brand span {
+            color: var(--primary);
+        }
+
+        .page-indicator {
+            font-size: 44px;
+            font-weight: 800;
+            font-family: 'Outfit';
+            color: var(--primary);
+            opacity: 0.8;
+        }
+
+        @media print {
+            body {
+                background: none;
+            }
+
+            .slide {
+                margin: 0;
+                page-break-after: always;
+                box-shadow: none;
+                border: none;
+            }
+
+            .glow,
+            .grid {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SLIDE 1: COVER -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="content center">
+            <div class="badge">Innovation Series</div>
+            <h1>QAutoX <span class="highlight">AI</span></h1>
+            <p style="margin-top: 40px; font-size: 48px; color: #fff; font-weight: 600;">The Industrial-Strength
+                Automation Hub</p>
+            <p style="margin-top: 20px;">Orchestrating n8n + Playwright for Seamless QA</p>
+
+            <div class="feature-card" style="align-items: center; text-align: center; margin-top: 80px; width: 80%;">
+                <div class="icon-box" style="background: linear-gradient(135deg, #38bdf8, #818cf8);">🚀</div>
+                <h3 style="font-size: 42px; margin: 0;">Scale Your Testing</h3>
+                <p style="font-size: 28px;">From manual bottlenecks to automated precision.</p>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">01</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE CHALLENGE -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content">
+            <div class="badge">The Problem</div>
+            <h2>QA is Stuck in the <span class="highlight">Past</span></h2>
+            <p>Manual testing isn't just slow—it's risky. In complex ERP and enterprise environments, every manual step
+                is a potential failure point.</p>
+
+            <div class="feature-card">
+                <div style="display: flex; gap: 30px; align-items: center;">
+                    <div class="icon-box" style="background: rgba(244, 114, 114, 0.1); color: #f87171;">⚠️</div>
+                    <div>
+                        <h3 style="font-size: 36px; margin: 0; color: #f87171;">The Bottleneck</h3>
+                        <p style="font-size: 28px;">Testing complex enquiries, managing PDF data, and manually updating
+                            stakeholders takes hours.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-value">60%</div>
+                    <div class="stat-label">Time wasted on manual regression</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">High</div>
+                    <div class="stat-label">Risk of human error in PDF validation</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">02</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: THE SOLUTION -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content">
+            <div class="badge">The Solution</div>
+            <h2>Meet the <span class="highlight">Power Duo</span></h2>
+            <p>We've combined the visual orchestration of <b>n8n</b> with the deep-browser capabilities of
+                <b>Playwright</b>.</p>
+
+            <div class="feature-card" style="border-left: 8px solid var(--primary);">
+                <div class="icon-box">🧠</div>
+                <h3 style="font-size: 40px; margin: 0;">Visual Brain (n8n)</h3>
+                <p>Orchestrates the entire logic, handles triggers, and manages the flow between nodes with 100%
+                    transparency.</p>
+            </div>
+
+            <div class="feature-card" style="border-left: 8px solid var(--secondary);">
+                <div class="icon-box">⚙️</div>
+                <h3 style="font-size: 40px; margin: 0;">Execution Engine (Playwright)</h3>
+                <p>Handles the heavy lifting: secure logins, complex iFrames, PDF parsing, and real-time toast
+                    verification.</p>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">03</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: HOW IT WORKS -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content">
+            <div class="badge">Architecture</div>
+            <h2>A <span class="highlight">Node-by-Node</span> Journey</h2>
+
+            <div style="margin-top: 40px;">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Dynamic Trigger</h3>
+                        <p>Webhook or Manual Start with Product-Wise selection (Product 1/Product 2).</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background: var(--secondary);">2</div>
+                    <div class="step-content">
+                        <h3>Intelligent Discovery</h3>
+                        <p>The "Cognitive Router" scans product folders and builds the execution queue dynamically.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background: var(--accent);">3</div>
+                    <div class="step-content">
+                        <h3>Parallel Execution</h3>
+                        <p>Playwright spawns runners, executing tests and capturing exit codes in real-time.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background: #22c55e;">4</div>
+                    <div class="step-content">
+                        <h3>Automated Reporting</h3>
+                        <p>Instant Slack updates and Gmail alerts for critical regressions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">04</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: INTELLIGENCE -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content">
+            <div class="badge">Smart Features</div>
+            <h2>Beyond <span class="highlight">Simple Scripts</span></h2>
+            <p>QAutoX isn't just a runner. It's an intelligent ecosystem designed for enterprise-scale QA.</p>
+
+            <div class="stat-grid" style="grid-template-columns: 1fr; gap: 20px;">
+                <div class="stat-card" style="flex-direction: row; align-items: center; gap: 40px;">
+                    <div class="icon-box" style="font-size: 40px; width: 80px; height: 80px;">🛡️</div>
+                    <div>
+                        <h4 style="font-size: 32px; margin: 0; color: #fff;">Self-Healing Architecture</h4>
+                        <p style="font-size: 24px;">Detects failures and decides whether to continue or escalate.</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="flex-direction: row; align-items: center; gap: 40px;">
+                    <div class="icon-box" style="font-size: 40px; width: 80px; height: 80px;">📊</div>
+                    <div>
+                        <h4 style="font-size: 32px; margin: 0; color: #fff;">Historical Audit Logs</h4>
+                        <p style="font-size: 24px;">Automatic Markdown reports for deep historical analysis.</p>
+                    </div>
+                </div>
+                <div class="stat-card" style="flex-direction: row; align-items: center; gap: 40px;">
+                    <div class="icon-box" style="font-size: 40px; width: 80px; height: 80px;">🔄</div>
+                    <div>
+                        <h4 style="font-size: 32px; margin: 0; color: #fff;">Dynamic Scaling</h4>
+                        <p style="font-size: 24px;">Easily add new products without touching the core workflow.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">05</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: TRANSMISSION -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content">
+            <div class="badge">Connectivity</div>
+            <h2>Real-time <span class="highlight">Transparency</span></h2>
+            <p>Stay informed where you already work. No need to log into a separate dashboard.</p>
+
+            <div class="feature-card" style="background: rgba(74, 21, 75, 0.1); border-color: rgba(74, 21, 75, 0.3);">
+                <div style="display: flex; gap: 30px; align-items: center;">
+                    <div class="icon-box" style="background: #4a154b; color: white;">S</div>
+                    <div>
+                        <h3 style="font-size: 36px; margin: 0;">Slack Integration</h3>
+                        <p style="font-size: 28px;">Pass/Fail notifications with duration metrics and direct error
+                            links.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-card" style="background: rgba(234, 67, 53, 0.1); border-color: rgba(234, 67, 53, 0.3);">
+                <div style="display: flex; gap: 30px; align-items: center;">
+                    <div class="icon-box" style="background: #ea4335; color: white;">M</div>
+                    <div>
+                        <h3 style="font-size: 36px; margin: 0;">Gmail Escalation</h3>
+                        <p style="font-size: 28px;">High-priority HTML reports for critical regressions and suite
+                            summaries.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">06</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: RESULTS -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="content center">
+            <div class="badge">The Outcome</div>
+            <h2>The <span class="highlight">Result?</span></h2>
+
+            <div class="stat-grid" style="margin-top: 80px;">
+                <div class="stat-card">
+                    <div class="stat-value">90%</div>
+                    <div class="stat-label">Reduction in manual time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Team Transparency</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Zero</div>
+                    <div class="stat-label">Missed critical alerts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Scale</div>
+                    <div class="stat-label">Infinite test capacity</div>
+                </div>
+            </div>
+
+            <p style="margin-top: 80px; font-size: 42px; font-weight: 700; color: #fff;">Modern Teams deserve Modern
+                Tools.</p>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">07</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: CTA -->
+    <div class="slide">
+        <div class="grid"></div>
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="content center">
+            <div class="badge">Next Steps</div>
+            <h1>Ready to <span class="highlight">Scale?</span></h1>
+            <p style="margin-top: 40px; font-size: 42px;">Transform your QA from a bottleneck into a competitive
+                advantage.</p>
+
+            <div class="feature-card"
+                style="margin-top: 100px; width: 100%; border: 2px solid var(--primary); text-align: center; align-items: center;">
+                <h3 style="font-size: 52px; margin: 0;">Let's Talk Automation</h3>
+                <p style="font-size: 32px; margin-top: 20px;">Drop a comment or DM to see a live demo of <b>QAutoX
+                        AI</b>.</p>
+            </div>
+
+            <div style="margin-top: 100px; font-size: 32px; font-weight: 700; opacity: 0.6;">
+                #QAAutomation #Playwright #n8n #Innovation
+            </div>
+        </div>
+        <div class="footer">
+            <div class="brand">QAutoX <span>AI</span></div>
+            <div class="page-indicator">08</div>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,72 @@
+[
+    {
+        "scene": 1,
+        "time": "0:00 - 0:07",
+        "visual": "Hero Shield Icon - Glowing",
+        "voiceover": "In a world where cyber threats evolve every second, speed and intelligence are your only real defense. Welcome to the future of security validation with SecValid AI.",
+        "subtitles": "In a world of evolving cyber threats, speed and intelligence are your only defense."
+    },
+    {
+        "scene": 2,
+        "time": "0:07 - 0:14",
+        "visual": "Glitchy Code Scan Visual",
+        "voiceover": "Traditional scanners often miss the deep logic flaws that modern web apps hide. They check patterns, but they don't understand context.",
+        "subtitles": "Traditional security tools miss logic flaws and lack contextual understanding."
+    },
+    {
+        "scene": 3,
+        "time": "0:14 - 0:22",
+        "visual": "AI Brain & Gemini Logo",
+        "voiceover": "SecValid AI is different. It's a self-healing security assistant powered by Google's Gemini 2.0 Flash, designed to think like a security researcher.",
+        "subtitles": "Introducing SecValid AI. Powered by Google's Gemini 2.0 Flash."
+    },
+    {
+        "scene": 4,
+        "time": "0:22 - 0:35",
+        "visual": "OWASP Vulnerability Screen",
+        "voiceover": "Our Core Scanner targets the OWASP Top 10. For example, it detects SQL Injection by analyzing how user inputs interact with your database, and flags XSS vulnerabilities in your React components before they hit production.",
+        "subtitles": "OWASP Top 10 Coverage: Detecting SQL Injection, XSS, and Logic Flaws."
+    },
+    {
+        "scene": 5,
+        "time": "0:35 - 0:48",
+        "visual": "Compliance & Legal Screen",
+        "voiceover": "Stay ahead of regulations with our Compliance module. It automatically scans for GDPR cookie consent banners, PCI-DSS payment security gaps, and even checks if your privacy policy is present and legally sound.",
+        "subtitles": "Compliance & Legal: Automated GDPR, PCI-DSS, and HIPAA verification."
+    },
+    {
+        "scene": 6,
+        "time": "0:48 - 1:00",
+        "visual": "API & Privacy Screen",
+        "voiceover": "SecValid also deep-dives into your code to find exposed AWS keys, Stripe secrets, and hidden third-party trackers. It maps your entire API attack surface in seconds.",
+        "subtitles": "API & Privacy: Detecting exposed secrets and hidden data trackers."
+    },
+    {
+        "scene": 7,
+        "time": "1:00 - 1:12",
+        "visual": "Hybrid Engine Summary",
+        "voiceover": "This is made possible by our Hybrid Engine. We run Static Regex, Browser Header analysis, and Generative AI in parallel to give you a 360-degree view of your security posture.",
+        "subtitles": "Hybrid Engine: Static Analysis + Browser Headers + Generative AI."
+    },
+    {
+        "scene": 8,
+        "time": "1:12 - 1:22",
+        "visual": "Reliability Fallback Loop",
+        "voiceover": "With our 3-Tier Fallback system, the scanner never stops. If one AI model is busy, it automatically routes to the next, ensuring 100% availability for your audits.",
+        "subtitles": "Self-Healing Reliability: 100% availability with 3-Tier AI Fallback."
+    },
+    {
+        "scene": 9,
+        "time": "1:22 - 1:32",
+        "visual": "Consolidated Reporting Gauge",
+        "voiceover": "Everything merges into a single Risk Score. No more digging through logs—just actionable intelligence that tells you exactly what to fix first.",
+        "subtitles": "Consolidated Risk Scoring: Prioritize what matters most."
+    },
+    {
+        "scene": 10,
+        "time": "1:32 - 1:40",
+        "visual": "Outro Screen with CTA",
+        "voiceover": "SecValid AI. Intelligence Validated. Subscribe to see how we are redefining security for the AI era. Start your first scan today.",
+        "subtitles": "SecValid AI. Intelligence Validated. Subscribe for more."
+    }
+]

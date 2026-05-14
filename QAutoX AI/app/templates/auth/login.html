@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - QAutoX</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/code_modal.css') }}">
+</head>
+
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">
+                    <div style="display: flex; align-items: center; gap: 15px; justify-content: center;">
+                        <img src="{{ url_for('static', filename='images/logo_icon.png') }}" alt="QAutoX"
+                            style="height: 50px; width: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+                        <div class="logo">QAutoX</div>
+                    </div>
+                    <p class="tagline">Automate. Analyze. Accelerate.</p>
+                </div>
+            </div>
+        </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="upload-card" style="max-width: 400px; margin: 0 auto;">
+                <div class="upload-header">
+                    <h2>Login</h2>
+                    <p>Please sign in to continue</p>
+                </div>
+
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 1rem; color: #ff6b6b; text-align: center;">
+                    {% for message in messages %}
+                    <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('auth.login') }}">
+                    <div class="form-group">
+                        <label for="username"
+                            style="display: block; margin-bottom: 0.5rem; color: #ccc;">Username</label>
+                        <input type="text" id="username" name="username" required
+                            style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password"
+                            style="display: block; margin-bottom: 0.5rem; color: #ccc;">Password</label>
+                        <input type="password" id="password" name="password" required
+                            style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Login</button>
+                </form>
+
+                <!-- <div style="margin-top: 1.5rem; text-align: center; color: #aaa; font-size: 0.9rem;">
+                    <p>Don't have an account? <a href="{{ url_for('auth.register') }}" style="color: #6366f1;">Register here</a></p>
+                </div> -->
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

@@ -1,0 +1,338 @@
+{
+    "name": "Playwright Premium Suite v4",
+    "settings": {
+        "executionTimeout": -1
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "manual_trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const SELECTED_PRODUCT = 'ERP';\nconst products = {\n  'ERP': { product: 'ERP', folder: 'ERP' },\n  'Camp': { product: 'Camp', folder: 'CampAccomodation' }\n};\nreturn [{ json: products[SELECTED_PRODUCT] }];"
+            },
+            "id": "select_product",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (fs.existsSync(resultsDir)) {\n  fs.readdirSync(resultsDir).forEach(f => {\n    try { fs.unlinkSync(path.join(resultsDir, f)); } catch (e) {}\n  });\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\nreturn $input.all();"
+            },
+            "id": "init_cleanup",
+            "name": "Init & Cleanup",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst item = $input.item.json;\nconst folder = item.folder;\nconst fullPath = `c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/tests/${folder}`;\nconst files = fs.readdirSync(fullPath).filter(f => f.endsWith('.spec.js'));\nreturn files.map(f => ({\n  json: { ...item, filename: f, testPath: `tests/${folder}/${f}` }\n}));"
+            },
+            "id": "find_files",
+            "name": "Find Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                600,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nconst cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\nconst cwd = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow';\nconst startTime = new Date();\nlet stdout = '', stderr = '', exitCode = 0;\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe', timeout: 600000 }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\nconst duration = ((new Date() - startTime) / 1000).toFixed(2);\nlet testCases = [], stats = { total: 0, passed: 0, failed: 0 }, jsonErrors = [];\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    if (jsonData.stats) {\n      stats.passed = jsonData.stats.expected || 0;\n      stats.failed = jsonData.stats.unexpected || 0;\n      stats.total = stats.passed + stats.failed + (jsonData.stats.skipped || 0);\n    }\n    if (jsonData.suites) {\n      jsonData.suites.forEach(suite => {\n        (suite.specs || []).forEach(spec => {\n          spec.tests.forEach(test => {\n            const res = test.results && test.results[0];\n            if (res && res.status === 'failed' && res.error) jsonErrors.push(res.error.message);\n            testCases.push({ title: spec.title, status: res ? res.status : 'unknown' });\n          });\n        });\n      });\n    }\n  }\n} catch (e) {}\nconst combined = stdout + '\\n' + stderr;\nconst jsonStart = combined.lastIndexOf('{\"stats\":');\nconst logs = jsonStart !== -1 ? combined.substring(0, jsonStart).trim() : combined.trim();\nconst finalLogs = logs.replace(/\\[MCP\\] ✅ Called \\/\\w+/g, '').trim();\nlet errorDetails = jsonErrors.length > 0 ? \"--- CASE ERRORS ---\\n\" + jsonErrors.join('\\n\\n') + \"\\n\\n\" : '';\nif (exitCode !== 0) errorDetails += \"--- SYSTEM LOGS ---\\n\" + finalLogs;\nreturn {\n  json: { ...item, exitCode, status: exitCode === 0 ? 'passed' : 'failed', duration: `${duration}s`, timestamp: new Date().toISOString(), stats, testCases, errorDetails: errorDetails || 'Passed', rawStdout: stdout }\n};"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.item.json;\nconst stdout = item.rawStdout;\nconst cwd = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow';\nlet failures = [];\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    function processSuite(suite, parents = []) {\n      const currentTitle = parents.concat(suite.title || []).filter(t => t);\n      (suite.specs || []).forEach(spec => {\n        const specTitle = currentTitle.concat(spec.title).join(' > ');\n        (spec.tests || []).forEach(test => {\n          const res = (test.results || []).find(r => r.status === 'failed' || r.status === 'timedOut');\n          if (res) {\n            const ss = (res.attachments || []).find(a => a.name === 'screenshot');\n            failures.push({\n              filename: item.filename, product: item.product, testTitle: specTitle,\n              caseError: res.error ? (res.error.stack || res.error.message) : 'Test failed',\n              caseDuration: (res.duration / 1000).toFixed(2) + 's',\n              screenshotPath: ss ? (ss.path.includes(':') || ss.path.startsWith('/') ? ss.path : `${cwd}/${ss.path}`).replace(/\\\\/g, '/') : null,\n              timestamp: item.timestamp\n            });\n          }\n        });\n      });\n      if (suite.suites) suite.suites.forEach(s => processSuite(s, currentTitle));\n    }\n    if (jsonData.suites) jsonData.suites.forEach(s => processSuite(s));\n  }\n} catch (err) {}\nif (failures.length === 0 && item.status === 'failed') {\n  failures.push({ filename: item.filename, product: item.product, testTitle: 'Execution Error', caseError: item.errorDetails, caseDuration: item.duration, screenshotPath: null, timestamp: item.timestamp });\n}\nreturn failures.map(f => ({ json: f }));"
+            },
+            "id": "split_failures",
+            "name": "Split Case Failures",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1300,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "fileSelector": "={{ $json.screenshotPath }}"
+            },
+            "id": "read_screenshot",
+            "name": "Read Screenshot",
+            "type": "n8n-nodes-base.readBinaryFile",
+            "typeVersion": 1,
+            "position": [
+                1500,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '🚨 Case Failed: ' + $json.testTitle }}",
+                "message": "={{ 'Status: ' + $json.testTitle + '\\n\\n' + $json.caseError }}",
+                "attachmentsUi": {
+                    "attachmentsValues": [
+                        {
+                            "binaryPropertyName": "data"
+                        }
+                    ]
+                }
+            },
+            "id": "case_failure_gmail",
+            "name": "Gmail Alert (Case)",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1700,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst testData = $node[\"Run Playwright Test\"].json;\nconst resultsDir = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst resultFile = path.join(resultsDir, `test_${Date.now()}_${testData.filename}.json`);\nfs.writeFileSync(resultFile, JSON.stringify(testData, null, 2));\nreturn [{ json: testData }];"
+            },
+            "id": "save_result",
+            "name": "Save Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1300,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst files = fs.readdirSync(resultsDir).filter(f => f.startsWith('test_') && f.endsWith('.json'));\nlet totalCases = 0, passedCases = 0, totalFiles = files.length, product = 'ERP';\nlet allTestCases = [];\nfiles.forEach(f => {\n  const data = JSON.parse(fs.readFileSync(path.join(resultsDir, f)));\n  totalCases += (data.stats ? data.stats.total : 1);\n  passedCases += (data.stats ? data.stats.passed : (data.exitCode === 0 ? 1 : 0));\n  product = data.product || product;\n  if (data.testCases) data.testCases.forEach(tc => allTestCases.push({ ...tc, filename: data.filename }));\n});\nconst successRate = totalCases > 0 ? ((passedCases / totalCases) * 100).toFixed(2) : 0;\nreturn { json: { product, totalFiles, totalCases, passedCases, failedCases: totalCases - passedCases, successRate, allTestCases, timestamp: new Date().toLocaleString() } };"
+            },
+            "id": "generate_summary",
+            "name": "Generate Summary Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $input.item.json;\nconst tableRows = data.allTestCases.map(tc => {\n  const status = (tc.status || '').toLowerCase();\n  const isPassed = status === 'passed';\n  const label = isPassed ? 'PASSED' : 'FAILED';\n  const color = isPassed ? '#27ae60' : '#e74c3c';\n  return `<tr><td style=\"padding:12px;border-bottom:1px solid #eee;\">${tc.title}</td><td style=\"padding:12px;border-bottom:1px solid #eee;color:#666;\">${tc.filename}</td><td style=\"padding:12px;border-bottom:1px solid #eee;color:${color};font-weight:bold;\">${label}</td></tr>`;\n}).join('');\n\nconst html = `\n<div style=\"font-family:Arial,sans-serif;max-width:850px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden;box-shadow:0 5px 15px rgba(0,0,0,0.05);\">\n  <div style=\"background:#34495e;color:white;padding:30px;text-align:center;\">\n    <h2 style=\"margin:0;font-size:24px;letter-spacing:1px;\">\ud83d\ude80 ${data.product} Automation Summary</h2>\n    <p style=\"margin:10px 0 0;opacity:0.8;font-size:14px;\">Test Execution Report</p>\n  </div>\n\n  <div style=\"background:#fcfcfc;padding:25px;\">\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"10\" border=\"0\">\n      <tr>\n        <td width=\"25%\" align=\"center\" style=\"background:#3498db;color:white;padding:20px;border-radius:10px;box-shadow:0 3px 6px rgba(0,0,0,0.1);\">\n          <div style=\"font-size:12px;text-transform:uppercase;opacity:0.9;margin-bottom:5px;font-weight:bold;\">Files</div>\n          <div style=\"font-size:24px;font-weight:bold;\">${data.totalFiles}</div>\n        </td>\n        <td width=\"25%\" align=\"center\" style=\"background:#27ae60;color:white;padding:20px;border-radius:10px;box-shadow:0 3px 6px rgba(0,0,0,0.1);\">\n          <div style=\"font-size:12px;text-transform:uppercase;opacity:0.9;margin-bottom:5px;font-weight:bold;\">Passed</div>\n          <div style=\"font-size:24px;font-weight:bold;\">${data.passedCases}</div>\n        </td>\n        <td width=\"25%\" align=\"center\" style=\"background:#e74c3c;color:white;padding:20px;border-radius:10px;box-shadow:0 3px 6px rgba(0,0,0,0.1);\">\n          <div style=\"font-size:12px;text-transform:uppercase;opacity:0.9;margin-bottom:5px;font-weight:bold;\">Failed</div>\n          <div style=\"font-size:24px;font-weight:bold;\">${data.failedCases}</div>\n        </td>\n        <td width=\"25%\" align=\"center\" style=\"background:#f39c12;color:white;padding:20px;border-radius:10px;box-shadow:0 3px 6px rgba(0,0,0,0.1);\">\n          <div style=\"font-size:12px;text-transform:uppercase;opacity:0.9;margin-bottom:5px;font-weight:bold;\">Success</div>\n          <div style=\"font-size:24px;font-weight:bold;\">${data.successRate}%</div>\n        </td>\n      </tr>\n    </table>\n  </div>\n\n  <div style=\"padding:30px;background:white;\">\n    <h3 style=\"margin-top:0;color:#2c3e50;border-bottom:2px solid #34495e;padding-bottom:10px;display:inline-block;\">Detailed Report</h3>\n    <table style=\"width:100%;border-collapse:collapse;margin-top:15px;\">\n      <thead>\n        <tr style=\"background:#f8f9fa;text-align:left;color:#333;\">\n          <th style=\"padding:15px;border-bottom:2px solid #dee2e6;\">Test Title</th>\n          <th style=\"padding:15px;border-bottom:2px solid #dee2e6;\">Source File</th>\n          <th style=\"padding:15px;border-bottom:2px solid #dee2e6;\">Status</th>\n        </tr>\n      </thead>\n      <tbody>${tableRows}</tbody>\n    </table>\n    <div style=\"text-align:center;color:#95a5a6;font-size:12px;margin-top:30px;padding-top:20px;border-top:1px solid #eee;\">\n      Generated by QAutoX Automation Engine on ${data.timestamp}\n    </div>\n  </div>\n</div>`;\n\nreturn { json: { ...data, summaryHtml: html } };"
+            },
+            "id": "write_html",
+            "name": "Write HTML Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1250,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '📊 ' + $json.product + ' Suite Summary' }}",
+                "emailType": "html",
+                "message": "={{ $json.summaryHtml }}"
+            },
+            "id": "email_summary",
+            "name": "Email Summary Report",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                600
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Select Product",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Product": {
+            "main": [
+                [
+                    {
+                        "node": "Init & Cleanup",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Init & Cleanup": {
+            "main": [
+                [
+                    {
+                        "node": "Find Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Test Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Generate Summary Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Test": {
+            "main": [
+                [
+                    {
+                        "node": "Split Case Failures",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Save Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Case Failures": {
+            "main": [
+                [
+                    {
+                        "node": "Read Screenshot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Read Screenshot": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Alert (Case)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert (Case)": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Result": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Summary Report": {
+            "main": [
+                [
+                    {
+                        "node": "Write HTML Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Write HTML Report": {
+            "main": [
+                [
+                    {
+                        "node": "Email Summary Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

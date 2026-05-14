@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official QA Automation Documentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-deep: #020617;
+            --bg-card: #0f172a;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent-n8n: #ff6d5a;
+            --accent-playwright: #2e8b57;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-deep);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            line-height: 1.6;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .hero {
+            position: relative;
+            padding: 80px 40px;
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            border-radius: 32px;
+            border: 1px solid var(--border);
+            margin-bottom: 60px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        .hero-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 16px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 100px;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            width: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -2px;
+            line-height: 1.1;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--text-dim);
+            max-width: 700px;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        section {
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 30px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--primary);
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            font-size: 22px;
+            margin: 0 0 15px 0;
+            color: #fff;
+        }
+
+        .card p {
+            font-size: 16px;
+            color: var(--text-dim);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .card-number {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: var(--bg-deep);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .mermaid-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 24px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--secondary);
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #000;
+            padding: 20px;
+            border-radius: 16px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            margin: 20px 0;
+        }
+
+        pre code {
+            color: #d1d5db;
+            background: none;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 30px 0;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+            text-align: left;
+            padding: 20px;
+            font-weight: 700;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        .logo-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .logo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot.n8n {
+            background: var(--accent-n8n);
+        }
+
+        .dot.playwright {
+            background: var(--accent-playwright);
+        }
+
+        .dot.slack {
+            background: #4a154b;
+        }
+
+        @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 20px;
+            }
+
+            .hero {
+                background: #f8fafc !important;
+                border: 2px solid #e2e8f0 !important;
+            }
+
+            h1 {
+                -webkit-text-fill-color: #000 !important;
+            }
+
+            .card {
+                border: 1px solid #e2e8f0 !important;
+                background: #fff !important;
+            }
+
+            .card h3,
+            .card p {
+                color: #000 !important;
+            }
+
+            .hero p {
+                color: #475569 !important;
+            }
+
+            h2::before {
+                background: #000 !important;
+            }
+
+            table {
+                border-color: #e2e8f0 !important;
+            }
+
+            th {
+                color: #000 !important;
+                background: #f1f5f9 !important;
+            }
+
+            td {
+                color: #334155 !important;
+                border-bottom-color: #e2e8f0 !important;
+            }
+
+            pre {
+                background: #f8fafc !important;
+                border-color: #e2e8f0 !important;
+            }
+
+            pre code {
+                color: #1e293b !important;
+            }
+
+            .mermaid-container {
+                border: 1px solid #e2e8f0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="hero-label">Official Documentation</div>
+            <h1>QA Automation Workflow:<br>Playwright + n8n + Slack</h1>
+            <p>A comprehensive guide to our visual, node-based automation pipeline designed for maximum transparency and
+                speed.</p>
+
+            <div class="logo-group">
+                <div class="logo-item">
+                    <div class="dot n8n"></div> n8n Orchestrator
+                </div>
+                <div class="logo-item">
+                    <div class="dot playwright"></div> Playwright Engine
+                </div>
+                <div class="logo-item">
+                    <div class="dot slack"></div> Slack Reporting
+                </div>
+            </div>
+        </div>
+
+        <section id="what-is-n8n">
+            <h2>1. What is n8n?</h2>
+            <p><b>n8n</b> is the "brain" of our operation. It's a visual workflow tool that allows us to connect complex
+                tools like <b>Playwright</b> with communication platforms like <b>Slack</b> without writing massive
+                amounts of glue code.</p>
+            <div class="grid">
+                <div class="card">
+                    <h3>Visual Interface</h3>
+                    <p>Unlike scripts hidden in terminal windows, n8n shows you exactly where the data is moving through
+                        nodes.</p>
+                </div>
+                <div class="card">
+                    <h3>Unified Control</h3>
+                    <p>It acts as the single entry point for all our automated tests, whether scheduled or manual.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="why-n8n">
+            <h2>2. Why this Workflow?</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-number">01</div>
+                    <h3>Transparency</h3>
+                    <p>Anyone on the team can audit the workflow logic via the visual canvas.</p>
+                </div>
+                <div class="card">
+                    <div class="card-number">02</div>
+                    <h3>Flexibility</h3>
+                    <p>Easily swap scripts or add notification channels (Email, Teams, Jira) in seconds.</p>
+                </div>
+                <div class="card">
+                    <div class="card-number">03</div>
+                    <h3>Local Power</h3>
+                    <p>Runs on our local environment, ensuring security and access to internal staging servers.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="flow">
+            <h2>3. The Automation Flow</h2>
+            <p>This diagram represents the logical lifecycle of a test execution within our system.</p>
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph TD
+                    A[<b>Start</b>] --> B{Trigger}
+                    B -->|Manual| C[Config Node]
+                    B -->|Schedule| C
+                    C --> D[<b>Execute Playwright</b>]
+                    D --> E[Capture Logs & Screenshots]
+                    E --> F{Status?}
+                    F -->|Pass| G[Format Success Report]
+                    F -->|Fail| H[Extract Error & Trace]
+                    G --> I[<b>Post to Slack #automation</b>]
+                    H --> I
+                    I --> J[End]
+
+                    style A fill:#f1f5f9,stroke:#64748b
+                    style D fill:#38bdf8,stroke:#0ea5e9,color:#fff
+                    style I fill:#4a154b,stroke:#2d0d2e,color:#fff
+                </div>
+            </div>
+        </section>
+
+        <section id="setup">
+            <h2>4. Step-by-Step setup</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-number">1</div>
+                    <h3>Environment</h3>
+                    <pre><code>npm install
+npx playwright install</code></pre>
+                </div>
+                <div class="card">
+                    <div class="card-number">2</div>
+                    <h3>Launch n8n</h3>
+                    <p>Run <code>start_n8n.ps1</code> and navigate to <code>localhost:5678</code>.</p>
+                </div>
+                <div class="card">
+                    <div class="card-number">3</div>
+                    <h3>Import Data</h3>
+                    <p>Import <code>n8n-final-fix.json</code> into the n8n canvas.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="multi-script">
+            <h2>5. Running Multiple Scripts</h2>
+            <p>You have two powerful ways to run multiple test scripts in this workflow:</p>
+            <div class="grid">
+                <div class="card">
+                    <h3>Option A: Bulk Run</h3>
+                    <p>In the <b>"Set Script to Run"</b> node, enter multiple paths separated by spaces or use a
+                        wildcard:</p>
+                    <code>tests/*.spec.js</code>
+                    <p style="margin-top:10px; font-size:14px;"><i>Best for: Fast execution, single report.</i></p>
+                </div>
+                <div class="card">
+                    <h3>Option B: Sequential Loop</h3>
+                    <p>Import <code>n8n-multi-script-loop.json</code>. This uses an array of scripts and runs them one
+                        by one.</p>
+                    <code>[ { script: "A.js" }, { script: "B.js" } ]</code>
+                    <p style="margin-top:10px; font-size:14px;"><i>Best for: Individual Slack reports for each test.</i>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="product-execution">
+            <h2>6. Product-Wise Execution</h2>
+            <p>Our test suite is organized by product folders within the <code>tests/</code> directory (e.g.,
+                <code>tests/ERP/</code>).</p>
+            <div class="card" style="border-left: 5px solid var(--secondary);">
+                <h3>How to run a Product Suite:</h3>
+                <ol style="color: var(--text-dim); line-height: 2;">
+                    <li>Import <code>n8n-product-wise-runner.json</code>.</li>
+                    <li>Open the <b>"Select Product"</b> node.</li>
+                    <li>Update the <b>ProductName</b> value (e.g., <code>ERP</code>, <code>CRM</code>).</li>
+                    <li>Execute the workflow. Playwright will automatically find and run all <code>.spec.js</code> files
+                        inside that folder.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="deep-dive">
+            <h2>7. Deep Dive: Business Logic</h2>
+            <div class="card" style="border-left: 5px solid var(--accent-playwright);">
+                <h3>Complex Verification Steps</h3>
+                <p>Our scripts don't just click buttons. They perform advanced validations:</p>
+                <ul style="color: var(--text-dim); line-height: 2;">
+                    <li><b>Intelligent Login:</b> Handles session state and navigation.</li>
+                    <li><b>Headless Document Audit:</b> Intercepts and parses generated PDFs for content accuracy.</li>
+                    <li><b>Smart Retries:</b> Automatically handles network flakiness.</li>
+                    <li><b>Evidence Capture:</b> Full-page screenshots on any assertion failure.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>7. Troubleshooting</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Issue</th>
+                        <th>Resolution</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>npx command not found</b></td>
+                        <td>Specify the absolute path to <code>npx.cmd</code> in the n8n node settings.</td>
+                        <td><span class="status-badge">Config</span></td>
+                    </tr>
+                    <tr>
+                        <td><b>Slack Payload too large</b></td>
+                        <td>The workflow automatically truncates logs to 3800 characters to stay within Slack limits.
+                        </td>
+                        <td><span class="status-badge">Auto-Fixed</span></td>
+                    </tr>
+                    <tr>
+                        <td><b>Pathing Errors</b></td>
+                        <td>Ensure the "Working Directory" in n8n matches your local project root.</td>
+                        <td><span class="status-badge">Runtime</span></td>
+                    </tr>
+                    <tr>
+                        <td><b>Folder Not Found</b></td>
+                        <td>Ensure the Product Name matches the folder name exactly (Case-Sensitive).</td>
+                        <td><span class="status-badge">Pathing</span></td>
+                    </tr>
+                    <tr>
+                        <td><b>Parallel Limits</b></td>
+                        <td>Use Option B (Loop) if running too many scripts causes memory issues.</td>
+                        <td><span class="status-badge">Optimize</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <footer>
+            <div>Generated by Antigravity AI • 2026</div>
+            <div>QA Automation Team Confidential</div>
+        </footer>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+
+</html>

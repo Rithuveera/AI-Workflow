@@ -1,0 +1,217 @@
+{
+    "name": "ERP Automation (Full Auto Hub)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "node-trigger-manual",
+            "name": "Manual",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "days"
+                        }
+                    ]
+                }
+            },
+            "id": "node-trigger-schedule",
+            "name": "Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { json: { folder: \"ERP\" } },\n  { json: { folder: \"CampAccomodation\" } }\n];"
+            },
+            "id": "node-suite",
+            "name": "Suite",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                250,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "const cp = require('child_process');\nconst results = [];\nconst items = $input.all();\nconst root = 'C:/Users/veeramani/desktop/playwright-mcp';\n\nfor (const item of items) {\n  const folder = item.json.folder;\n  try {\n    const out = cp.execSync(`dir /b \"tests\\\\${folder}\\\\*.spec.js\"`, { cwd: root }).toString();\n    const files = out.split(/\\r?\\n/).filter(f => f.trim().length > 0);\n    for (const f of files) {\n      results.push({ json: { filename: f, folder: folder } });\n    }\n  } catch (e) {}\n}\nreturn results;"
+            },
+            "id": "node-find",
+            "name": "Find",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                500,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "node-loop",
+            "name": "Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                750,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const cp = require('child_process');\nconst f = $input.item.json.folder;\nconst s = $input.item.json.filename;\nconst cmd = `npx playwright test \"tests/${f}/${s}\"`;\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\n\ntry {\n  const out = cp.execSync(cmd, { cwd: cwd, timeout: 300000 }).toString();\n  return { json: { status: 'passed', file: s, output: out } };\n} catch (e) {\n  return { json: { status: 'failed', file: s, output: String(e) } };\n}"
+            },
+            "id": "node-run",
+            "name": "Run",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1000,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "general",
+                "text": "={{ '🧪 *Test:* ' + $json.file + ' | Result: ' + ($json.status === 'passed' ? '✅' : '❌') }}"
+            },
+            "id": "node-slack",
+            "name": "Slack",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "🚨 Playwright Failure: {{ $json.file }}",
+                "emailType": "html",
+                "text": "={{ '<h3>🚀 Failure Alert</h3><p>Script: ' + $json.file + '</p><p>Check Slack for full logs.</p>' }}"
+            },
+            "id": "node-email",
+            "name": "Email",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1250,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Manual": {
+            "main": [
+                [
+                    {
+                        "node": "Suite",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "Suite",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Suite": {
+            "main": [
+                [
+                    {
+                        "node": "Find",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run": {
+            "main": [
+                [
+                    {
+                        "node": "Slack",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Slack": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Email": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

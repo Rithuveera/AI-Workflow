@@ -1,0 +1,7 @@
+{
+  "aiProvider": "gemini-2.0-flash",
+  "sensitivity": "standard",
+  "emailAlerts": true,
+  "weeklyReports": true,
+  "emailAddress": "veeramanibatharvellai@gmail.com"
+}

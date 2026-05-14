@@ -1,0 +1,48 @@
+
+📊 ========== TESTFLOW DATABASE CONTENTS ==========
+
+📋 REQUIREMENTS:
+────────────────────────────────────────────────────────────────────────────────
+1. ID: REQ_LO_001
+   Title: login 
+   Description: test llogin
+   Created: 2025-12-02 08:23:58
+
+
+🧪 TEST CASES:
+────────────────────────────────────────────────────────────────────────────────
+1. ID: TC_LO_001
+   Title: Verify the login fucntionality 
+   Requirement: login 
+   Priority: Medium
+   Steps: 1.Enter the login url 
+   Expected Result: Login page should be redirected 
+   Created: 2025-12-02 08:36:10
+
+
+🏃 EXECUTIONS:
+────────────────────────────────────────────────────────────────────────────────
+   (No executions found)
+
+👥 USERS:
+────────────────────────────────────────────────────────────────────────────────
+1. ID: user-1764663814353
+   Username: Veera
+   Created: 2025-12-02 08:23:34
+
+
+📈 STATISTICS:
+────────────────────────────────────────────────────────────────────────────────
+Total Requirements: 1
+Total Test Cases: 1
+Total Executions: 0
+
+Execution Breakdown:
+  ✅ Passed: 0
+  ❌ Failed: 0
+  ⚠️  Blocked: 0
+  ➖ Not Applicable: 0
+
+================================================================================
+📁 Database Location: C:\Users\veeramani\.gemini\antigravity\scratch\Testcase_app\server\database\testflow.db
+

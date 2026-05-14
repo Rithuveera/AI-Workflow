@@ -1,0 +1,416 @@
+{
+  "info": {
+    "name": "Case10X AI - API Collection",
+    "description": "Complete API collection for Case10X AI Test Case Generator",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "case10x-ai-collection",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. File Upload & Test Generation",
+      "item": [
+        {
+          "name": "Upload Requirement Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Requirement document (PDF/DOCX/TXT)"
+                },
+                {
+                  "key": "test_suite",
+                  "value": "Login Module",
+                  "type": "text",
+                  "description": "Test suite/module name (optional)"
+                },
+                {
+                  "key": "model",
+                  "value": "gemini-2.5-flash",
+                  "type": "text",
+                  "description": "AI model to use (optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/upload",
+              "host": ["{{base_url}}"],
+              "path": ["upload"]
+            },
+            "description": "Upload a requirement document and generate test cases using AI"
+          }
+        },
+        {
+          "name": "Chat with AI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What are the main features in this document?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            },
+            "description": "Chat with AI about the uploaded requirement document"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Test Case Management",
+      "item": [
+        {
+          "name": "Get All Test Cases",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-cases",
+              "host": ["{{base_url}}"],
+              "path": ["test-cases"]
+            },
+            "description": "Retrieve all test cases from the database"
+          }
+        },
+        {
+          "name": "Get Test Cases by Filename",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-cases?filename=requirements.pdf",
+              "host": ["{{base_url}}"],
+              "path": ["test-cases"],
+              "query": [
+                {
+                  "key": "filename",
+                  "value": "requirements.pdf",
+                  "description": "Filter by requirement file name"
+                }
+              ]
+            },
+            "description": "Get test cases for a specific requirement file"
+          }
+        },
+        {
+          "name": "Update Test Case",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test_case_name\": \"Updated test case name\",\n  \"description\": \"Updated description\",\n  \"preconditions\": \"Updated preconditions\",\n  \"test_steps\": \"1. Step 1\\n2. Step 2\\n3. Step 3\",\n  \"expected_result\": \"Updated expected result\",\n  \"priority\": \"High\",\n  \"test_type\": \"Functional\",\n  \"requirement_description\": \"Updated requirement description\",\n  \"status\": \"Passed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-cases/1",
+              "host": ["{{base_url}}"],
+              "path": ["test-cases", "1"]
+            },
+            "description": "Update a specific test case by ID"
+          }
+        },
+        {
+          "name": "Delete Test Case",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-cases/1",
+              "host": ["{{base_url}}"],
+              "path": ["test-cases", "1"]
+            },
+            "description": "Delete a specific test case by ID"
+          }
+        },
+        {
+          "name": "Clear All Test Cases",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-cases/clear-all",
+              "host": ["{{base_url}}"],
+              "path": ["test-cases", "clear-all"]
+            },
+            "description": "Delete ALL test cases (Warning: Irreversible!)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Test Execution",
+      "item": [
+        {
+          "name": "Execute Test (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test_case_id\": 1,\n  \"status\": \"Passed\",\n  \"version\": \"Release 1.0\",\n  \"comments\": \"All steps executed successfully\",\n  \"defect_id\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/execute",
+              "host": ["{{base_url}}"],
+              "path": ["execute"]
+            },
+            "description": "Record test execution without evidence file"
+          }
+        },
+        {
+          "name": "Execute Test (with Evidence)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "test_case_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Failed",
+                  "type": "text",
+                  "description": "Passed/Failed/Blocked"
+                },
+                {
+                  "key": "version",
+                  "value": "Release 1.0",
+                  "type": "text"
+                },
+                {
+                  "key": "comments",
+                  "value": "Login button not responding",
+                  "type": "text"
+                },
+                {
+                  "key": "defect_id",
+                  "value": "BUG-123",
+                  "type": "text"
+                },
+                {
+                  "key": "evidence",
+                  "type": "file",
+                  "src": "",
+                  "description": "Screenshot or evidence file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/execute",
+              "host": ["{{base_url}}"],
+              "path": ["execute"]
+            },
+            "description": "Record test execution with evidence file upload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Reports & Analytics",
+      "item": [
+        {
+          "name": "Get Execution Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/reports",
+              "host": ["{{base_url}}"],
+              "path": ["reports"]
+            },
+            "description": "Get aggregated execution statistics by version and status"
+          }
+        },
+        {
+          "name": "Get Defects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/defects",
+              "host": ["{{base_url}}"],
+              "path": ["defects"]
+            },
+            "description": "Get all failed test executions (defects)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. AI Automation",
+      "item": [
+        {
+          "name": "Generate Automation Script",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "test_case",
+                  "value": "{\"test_case_name\":\"Verify login\",\"description\":\"Test login functionality\",\"test_steps\":\"1. Navigate to login page\\n2. Enter credentials\\n3. Click login\",\"expected_result\":\"User successfully logged in\"}",
+                  "type": "text",
+                  "description": "Test case object (JSON string)"
+                },
+                {
+                  "key": "target_url",
+                  "value": "https://example.com/login",
+                  "type": "text",
+                  "description": "Target URL (optional)"
+                },
+                {
+                  "key": "target_username",
+                  "value": "testuser@example.com",
+                  "type": "text",
+                  "description": "Login username (optional)"
+                },
+                {
+                  "key": "target_password",
+                  "value": "Test@123",
+                  "type": "text",
+                  "description": "Login password (optional)"
+                },
+                {
+                  "key": "screenshot",
+                  "type": "file",
+                  "src": "",
+                  "description": "Page screenshot for better locators (optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/generate-automation",
+              "host": ["{{base_url}}"],
+              "path": ["generate-automation"]
+            },
+            "description": "Generate Playwright automation script using AI"
+          }
+        },
+        {
+          "name": "Run Automation Script",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"script\": \"console.log('Hello World');\",\n  \"test_case_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/run-automation-script",
+              "host": ["{{base_url}}"],
+              "path": ["run-automation-script"]
+            },
+            "description": "Execute automation script on the server (30s timeout)"
+          }
+        },
+        {
+          "name": "Generate Defect Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"test_case\": {\n    \"test_case_name\": \"Verify login with valid credentials\",\n    \"test_steps\": \"1. Navigate to login page\\n2. Enter valid email\\n3. Enter valid password\\n4. Click login button\",\n    \"expected_result\": \"User should be logged in successfully and redirected to dashboard\"\n  },\n  \"failure_reason\": \"Login button is not clickable after entering credentials. No visual feedback on hover.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/generate-defect",
+              "host": ["{{base_url}}"],
+              "path": ["generate-defect"]
+            },
+            "description": "Generate professional bug report using AI"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Export & Utility",
+      "item": [
+        {
+          "name": "Export Test Cases to Excel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export",
+              "host": ["{{base_url}}"],
+              "path": ["export"]
+            },
+            "description": "Export all test cases to Excel with traceability matrix"
+          }
+        },
+        {
+          "name": "Test AI Connection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/test-ai",
+              "host": ["{{base_url}}"],
+              "path": ["test-ai"]
+            },
+            "description": "Test Gemini AI connection and API key validity"
+          }
+        },
+        {
+          "name": "Get Main Page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Get the main application HTML page"
+          }
+        }
+      ]
+    }
+  ]
+}

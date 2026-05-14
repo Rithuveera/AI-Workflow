@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - QAutoX</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <img src="{{ url_for('static', filename='images/logo_icon.png') }}" alt="QAutoX"
+                            style="height: 40px; width: auto; border-radius: 8px;">
+                        <div class="logo">QAutoX</div>
+                    </div>
+                    <p class="tagline">Admin Console</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary"
+                        style="padding: 5px 10px; font-size: 0.8rem;">Add User</a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline"
+                        style="padding: 5px 10px; font-size: 0.8rem;">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages"
+                style="margin-bottom: 1rem; padding: 10px; background: rgba(99, 102, 241, 0.1); border: 1px solid #6366f1; border-radius: 4px; color: #fff; text-align: center;">
+                {% for message in messages %}
+                <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="test-cases-section">
+                <div class="section-header">
+                    <h2>Registered Users</h2>
+                </div>
+
+                <div class="matrix-container" style="overflow-x: auto;">
+                    <table class="matrix-table" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="background: #333; color: #fff;">
+                                <th style="padding: 1rem; text-align: left;">ID</th>
+                                <th style="padding: 1rem; text-align: left;">Username</th>
+                                <th style="padding: 1rem; text-align: left;">Role</th>
+                                <th style="padding: 1rem; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody style="background: #252525;">
+                            {% for user in users %}
+                            <tr style="border-bottom: 1px solid #333;">
+                                <td style="padding: 1rem; color: #ccc;">{{ user.id }}</td>
+                                <td style="padding: 1rem; color: #fff; font-weight: bold;">{{ user.username }}</td>
+                                <td style="padding: 1rem;">
+                                    {% if user.is_admin() %}
+                                    <span
+                                        style="background: rgba(99, 102, 241, 0.2); color: #8b5cf6; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">Admin</span>
+                                    {% else %}
+                                    <span
+                                        style="background: rgba(76, 175, 80, 0.1); color: #4caf50; padding: 2px 8px; border-radius: 4px; font-size: 0.9em;">Tester</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: 1rem; text-align: center;">
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-outline"
+                                        style="padding: 5px 15px; font-size: 0.8rem;">Edit</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

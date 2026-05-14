@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+error-screenshot.png
+.env
+*.pdf
+# Keep the carousel but ignore temporary ones
+!LINKEDIN_CAROUSEL.pdf

@@ -1,0 +1,111 @@
+"""
+Visual representation of API quota usage
+"""
+
+print("=" * 80)
+print("GEMINI API QUOTA - HOW IT WORKS")
+print("=" * 80)
+print()
+
+print("YOUR API KEY: AIzaSyAHEkmFFfpvt9HoJyCERX74wUJ_C8CJQ9M")
+print()
+
+print("┌─────────────────────────────────────────────────────────────────────────┐")
+print("│                    DAILY QUOTA (Resets at Midnight PT)                 │")
+print("└─────────────────────────────────────────────────────────────────────────┘")
+print()
+
+print("Model: gemini-2.0-flash")
+print("┌────────────────────────────────────────────────────────────────┐")
+print("│ Total Quota: 1,500 requests/day                                │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Used Today: ~1,500+ (EXHAUSTED ❌)                             │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Remaining: 0                                                   │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Status: ❌ QUOTA EXCEEDED                                      │")
+print("└────────────────────────────────────────────────────────────────┘")
+print()
+
+print("Model: gemini-2.5-flash")
+print("┌────────────────────────────────────────────────────────────────┐")
+print("│ Total Quota: 1,500 requests/day                                │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Used Today: ~2-5 requests                                      │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Remaining: ~1,495-1,498                                        │")
+print("├────────────────────────────────────────────────────────────────┤")
+print("│ Status: ✅ WORKING                                             │")
+print("└────────────────────────────────────────────────────────────────┘")
+print()
+
+print("=" * 80)
+print("WHERE DID THE QUOTA GO? (gemini-2.0-flash)")
+print("=" * 80)
+print()
+
+print("Possible Usage Today:")
+print("  1. Testing during development        : ~10-20 requests")
+print("  2. Debugging failed uploads          : ~5-10 requests")
+print("  3. Running test scripts              : ~5-10 requests")
+print("  4. Other projects (if any)           : Unknown")
+print("  5. Previous successful generations   : 2-3 requests")
+print("  ─────────────────────────────────────────────────────")
+print("  TOTAL ESTIMATED                      : 20-40+ requests")
+print()
+
+print("Note: Even though you only see 2-3 successful generations,")
+print("      there were likely many more failed attempts and tests.")
+print()
+
+print("=" * 80)
+print("TIMELINE (Approximate)")
+print("=" * 80)
+print()
+
+print("Earlier Today:")
+print("  ├─ 🔧 Development and testing with gemini-2.0-flash")
+print("  ├─ 🔧 Multiple test runs")
+print("  ├─ 🔧 Debugging and troubleshooting")
+print("  └─ ❌ Quota exhausted for gemini-2.0-flash")
+print()
+
+print("Just Now (08:30 AM IST):")
+print("  ├─ 🔍 Investigated the error")
+print("  ├─ 🔄 Switched to gemini-2.5-flash")
+print("  ├─ ✅ Successfully generated 39 test cases")
+print("  └─ ✅ Application working!")
+print()
+
+print("=" * 80)
+print("IMPORTANT UNDERSTANDING")
+print("=" * 80)
+print()
+
+print("❌ WRONG ASSUMPTION:")
+print("   'I just started the app, so quota should be fresh'")
+print()
+
+print("✅ CORRECT UNDERSTANDING:")
+print("   'Quota is shared across ALL usage of this API key TODAY'")
+print()
+
+print("The quota was used by:")
+print("  • All previous tests today")
+print("  • All development work today")
+print("  • All projects using this API key today")
+print("  • Everything since midnight Pacific Time")
+print()
+
+print("=" * 80)
+print("NEXT QUOTA RESET")
+print("=" * 80)
+print()
+
+print("Pacific Time (PT): Midnight (00:00 AM)")
+print("Your Time (IST):   1:30 PM")
+print()
+print("Next reset: Today at 1:30 PM IST (December 8, 2025)")
+print()
+
+print("=" * 80)

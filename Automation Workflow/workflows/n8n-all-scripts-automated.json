@@ -1,0 +1,303 @@
+{
+    "name": "Playwright - ALL 21 ERP SCRIPTS",
+    "settings": {
+        "executionTimeout": 3600
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// ========================================\n// SELECT PRODUCT TO RUN\n// Options: 'ERP' or 'Camp'\n// ========================================\nconst SELECTED_PRODUCT = 'ERP';\n\nconst fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\n\n// Cleanup previous results\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));\n  for (const file of files) { try { fs.unlinkSync(path.join(resultsDir, file)); } catch (e) {} }\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\n\nconst products = {\n  'ERP': { product: 'ERP', folder: 'ERP' },\n  'Camp': { product: 'Camp', folder: 'CampAccomodation' }\n};\n\nreturn [{ json: products[SELECTED_PRODUCT] }];"
+            },
+            "id": "product_selector",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst items = $input.all();\nconst folder = items[0].json.folder;\nconst basePath = 'C:/Users/veeramani/desktop/playwright-mcp/tests';\nconst fullPath = `${basePath}/${folder}`;\n\n// 🚀 RUN ALL SCRIPTS (No slice/limit)\nconst testFiles = fs.readdirSync(fullPath).filter(file => file.endsWith('.spec.js'));\n\nreturn testFiles.map(file => ({ json: { ...items[0].json, filename: file, testPath: `tests/${folder}/${file}` } }));"
+            },
+            "id": "find_tests",
+            "name": "Find Product Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\nconst cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\n\nconst startTime = new Date();\nlet stdout = '', stderr = '', exitCode = 0;\n\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe', timeout: 300000 }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\n\nconst endTime = new Date();\nconst duration = ((endTime - startTime) / 1000).toFixed(2);\n\nlet testCases = [], stats = { total: 0, passed: 0, failed: 0 }, reportSummary = '', screenshotPath = null;\n\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    if (jsonData.stats) {\n      stats.passed = jsonData.stats.expected || 0;\n      stats.failed = jsonData.stats.unexpected || 0;\n      stats.total = stats.passed + stats.failed;\n    }\n    if (jsonData.suites) {\n      jsonData.suites.forEach(suite => {\n        if (suite.specs) suite.specs.forEach(spec => {\n          spec.tests.forEach(test => {\n            const result = test.results && test.results[0];\n            const attachments = result ? (result.attachments || []) : [];\n            const screenshot = attachments.find(a => a.name === 'screenshot');\n            if (screenshot && !screenshotPath) screenshotPath = screenshot.path;\n            testCases.push({ title: spec.title, status: result ? result.status : 'unknown' });\n          });\n        });\n      });\n    }\n    reportSummary = testCases.map(tc => `${tc.status === 'passed' ? '✅' : '❌'} ${tc.title}`).join('\\n');\n  }\n} catch (e) {}\n\nreturn {\n  json: {\n    ...item, exitCode, status: exitCode === 0 ? 'passed' : 'failed', duration: `${duration}s`, timestamp: new Date().toISOString(), stats,\n    screenshotPath: (function() {\n      if (!screenshotPath) return null;\n      const isAbsolute = screenshotPath.includes(':') || screenshotPath.startsWith('/');\n      return (isAbsolute ? screenshotPath : `${cwd}/${screenshotPath}`).replace(/\\\\/g, '/');\n    })()\n  }\n};"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.status === 'failed' }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "if_failed",
+            "name": "If Failed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1200,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "fileSelector": "={{ $json.screenshotPath }}",
+                "options": {
+                    "continueOnFail": true
+                }
+            },
+            "id": "read_screenshot",
+            "name": "Read Screenshot",
+            "type": "n8n-nodes-base.readBinaryFile",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '🚨 Failed: ' + $json.filename }}",
+                "emailType": "html",
+                "message": "={{ '<html><body><h3>❌ Test Failed: ' + $json.filename + '</h3><p><b>Status:</b> ' + $json.status + '</p><p><b>Duration:</b> ' + $json.duration + '</p><pre>' + ($json.stderr || 'No error details') + '</pre></body></html>' }}",
+                "attachmentsUi": {
+                    "attachmentsValues": [
+                        {
+                            "binaryPropertyName": "data"
+                        }
+                    ]
+                }
+            },
+            "id": "gmail_alert",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1700,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst testData = $node[\"Run Playwright Test\"].json;\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\n\nconst timestamp = Date.now();\nconst filename = `test_${timestamp}_${testData.filename}.json`;\nfs.writeFileSync(path.join(resultsDir, filename), JSON.stringify(testData, null, 2));\n\nreturn { json: testData };"
+            },
+            "id": "save_result",
+            "name": "Save Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst lockFile = path.join(resultsDir, 'summary.lock');\n\nif (fs.existsSync(lockFile)) return { json: { alreadySent: true } };\nfs.writeFileSync(lockFile, 'locked');\n\nconst files = fs.readdirSync(resultsDir).filter(f => f.startsWith('test_') && f.endsWith('.json'));\nlet totalFiles = 0, passedFiles = 0, totalCases = 0, passedCases = 0, totalDuration = 0;\nlet failures = [];\n\nfiles.forEach(file => {\n  try {\n    const data = JSON.parse(fs.readFileSync(path.join(resultsDir, file)));\n    totalFiles++; \n    if (data.exitCode === 0) passedFiles++;\n    else failures.push(data.filename);\n    const d = parseFloat(data.duration || '0');\n    if (!isNaN(d)) totalDuration += d;\n  } catch (e) {}\n});\n\nreturn { json: {\n  alreadySent: false, totalFiles, passedFiles, failedFiles: totalFiles - passedFiles,\n  successRate: totalFiles > 0 ? ((passedFiles/totalFiles)*100).toFixed(2) + '%' : '0%',\n  totalDuration: totalDuration.toFixed(2) + 's',\n  timestamp: new Date().toLocaleString()\n} };"
+            },
+            "id": "generate_summary",
+            "name": "Generate Summary Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '📊 Final Summary - ' + $json.successRate }}",
+                "emailType": "html",
+                "message": "={{ '<html><body><h2>📊 Automation Summary</h2><p><b>Total Files:</b> ' + $json.totalFiles + '</p><p><b>Passed:</b> ' + $json.passedFiles + '</p><p><b>Failed:</b> ' + $json.failedFiles + '</p><p><b>Success Rate:</b> ' + $json.successRate + '</p></body></html>' }}"
+            },
+            "id": "gmail_summary",
+            "name": "Gmail Summary",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1250,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Select Product",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Product": {
+            "main": [
+                [
+                    {
+                        "node": "Find Product Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Product Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Test Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Generate Summary Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Test": {
+            "main": [
+                [
+                    {
+                        "node": "If Failed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "If Failed": {
+            "main": [
+                [
+                    {
+                        "node": "Read Screenshot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Save Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Read Screenshot": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert": {
+            "main": [
+                [
+                    {
+                        "node": "Save Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Result": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Summary Report": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Summary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -1,0 +1,585 @@
+{
+  "name": "Ultimate AI RCA - Guaranteed Sequential Engine",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));\n  for (const file of files) { try { fs.unlinkSync(path.join(resultsDir, file)); } catch(e){} }\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\nreturn [{ json: { product: 'ERP', folder: 'ERP' } }];"
+      },
+      "id": "init",
+      "name": "Init & Cleanup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst folder = $json.folder;\nconst fullPath = `C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/tests/${folder}`;\nconst allFiles = fs.readdirSync(fullPath).filter(f => f.endsWith('.spec.js'));\n\n// Capture only the first 5 test files for sample testing \nconst sampleFiles = allFiles.slice(0, 5);\n\nreturn sampleFiles.map(f => ({ json: { filename: f, testPath: `tests/${folder}/${f}` } }));"
+      },
+      "id": "find_tests",
+      "name": "Find Test Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { execSync } = require('child_process');\nconst fs = require('fs');\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\n\nconst items = $input.all();\n\nfor (const inputItem of items) {\n  const item = inputItem.json;\n  const cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\n  \n  const startTime = new Date();\n  let stdout = '', stderr = '';\n  try {\n    stdout = execSync(cmd, { cwd, stdio: 'pipe' }).toString();\n  } catch (e) {\n    stdout = (e.stdout || '').toString();\n    stderr = (e.stderr || e.message || '').toString();\n  }\n  const duration = ((new Date() - startTime) / 1000).toFixed(2);\n  \n  let allCases = [];\n  let stats = { total: 0, passed: 0, failed: 0 };\n  try {\n    const jsonData = JSON.parse(stdout.match(/\\{[\\s\\S]*\\}/)[0]);\n    if (jsonData.stats) {\n      stats.passed = jsonData.stats.expected || 0;\n      stats.failed = jsonData.stats.unexpected || 0;\n      stats.total = stats.passed + stats.failed + (jsonData.stats.skipped || 0);\n    }\n    function processSuite(suite, parents = []) {\n      const suiteTitle = parents.concat(suite.title || []).filter(t => t);\n      if (suite.specs) {\n        suite.specs.forEach(spec => {\n          const specTitle = suiteTitle.concat(spec.title).join(' > ');\n          spec.tests.forEach(test => {\n            const results = test.results || [];\n            const latestResult = results[results.length - 1];\n            if (latestResult) {\n               const isFailed = latestResult.status === 'failed' || latestResult.status === 'timedOut';\n               const screenshot = (latestResult.attachments || []).find(a => a.name === 'screenshot');\n               let errorMsg = isFailed ? (latestResult.errors?.map(e => e.message || e.stack).join('\\n\\n') || latestResult.error?.message || 'Unknown error') : '';\n               allCases.push({\n                   filename: item.filename,\n                   testTitle: specTitle,\n                   status: isFailed ? 'failed' : 'passed',\n                   error: errorMsg.substring(0, 3000),\n                   screenshotPath: screenshot ? (screenshot.path.includes(':') || screenshot.path.startsWith('/') ? screenshot.path : `${cwd}/${screenshot.path}`).replace(/\\\\/g, '/') : null,\n                   duration: (latestResult.duration / 1000).toFixed(2) + 's'\n               });\n            }\n          });\n        });\n      }\n      if (suite.suites) suite.suites.forEach(s => processSuite(s, suiteTitle));\n    }\n    if (jsonData.suites) jsonData.suites.forEach(s => processSuite(s));\n  } catch (e) { }\n  \n  const savePath = `C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results/res_${Date.now()}_${item.filename}.json`;\n  fs.writeFileSync(savePath, JSON.stringify({ filename: item.filename, duration: duration + 's', stats, cases: allCases }));\n}\n\nreturn [{ json: { success: true } }];"
+      },
+      "id": "execute_test",
+      "name": "Master Playwright Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst dir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (!fs.existsSync(dir)) return { json: { count: 0 } };\n\nconst files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));\nlet allCases = [];\nlet failedCases = [];\nlet totalPassed = 0, totalFailed = 0, totalCases = 0;\nlet html = '<table style=\"width:100%; border-collapse: collapse; font-family: Arial; border: 1px solid #ddd;\">\\n';\nhtml += '<tr style=\"background-color:#007bff; color:white;\"><th style=\"padding:12px;text-align:left;\">Test Script</th><th style=\"padding:12px;\">Total</th><th style=\"padding:12px;\">Passed</th><th style=\"padding:12px;\">Failed</th><th style=\"padding:12px;\">Duration</th></tr>\\n';\n\nfor (const file of files) {\n  const data = JSON.parse(fs.readFileSync(path.join(dir, file)));\n  const p = data.stats?.passed || 0;\n  const f = data.stats?.failed || 0;\n  const t = p + f;\n  totalPassed += p;\n  totalFailed += f;\n  totalCases += t;\n  const bg = f > 0 ? '#ffebee' : '#f1f8e9';\n  html += `<tr style=\"background-color:${bg}; border-bottom: 1px solid #ddd;\">`;\n  html += `<td style=\"padding:10px;\"><b>${data.filename}</b></td>`;\n  html += `<td style=\"padding:10px;text-align:center;\">${t}</td>`;\n  html += `<td style=\"padding:10px;text-align:center;color:green;\">${p}</td>`;\n  html += `<td style=\"padding:10px;text-align:center;color:red;\">${f}</td>`;\n  html += `<td style=\"padding:10px;text-align:center;\">${data.duration}</td>`;\n  html += `</tr>\\n`;\n  \n  if (data.cases) {\n     data.cases.forEach(c => {\n       allCases.push(c);\n       if (c.status === 'failed') failedCases.push(c);\n     });\n  }\n}\nhtml += '</table>';\n\nif(allCases.length === 0) return { json: { totalFiles: 0 } };\n\nreturn {\n  json: {\n    totalFiles: files.length,\n    totalCases,\n    passed: totalPassed,\n    failed: totalFailed,\n    html,\n    allCasesList: allCases,\n    failedCasesList: failedCases\n  }\n};"
+      },
+      "id": "aggregate_results",
+      "name": "Aggregate Summary & Failures",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "email": "veeramani.b@algosium.com",
+        "subject": "🎯 Final Execution Dashboard Summary",
+        "emailType": "html",
+        "message": "={{ \"<html><body style='font-family: Arial;'><div style='max-width: 800px; margin: auto;'> <div style='text-align:center; padding: 20px; background: #2c3e50; color: white;'><h2>🚀 Execution Dashboard</h2></div> <div style='padding: 20px; border: 1px solid #ddd;'>\" + $json.html + \"</div></div></body></html>\" }}"
+      },
+      "id": "gmail_summary",
+      "name": "Gmail Final Dashboard",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        150
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aFqA2wJ8eN1T2W6I",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const all = $input.item.json.allCasesList || [];\nreturn all.map(c => ({ json: c }));"
+      },
+      "id": "extract_all",
+      "name": "Extract ALL Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "chat_loop",
+      "name": "Chat Dispatch Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "chat_wait",
+      "name": "Chat Throttle Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1550,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: ($json.status === 'passed' ? '✅' : '❌') + ' *Case:* ' + $json.testTitle + '\\n*File:* ' + $json.filename + '\\n*Status:* ' + $json.status.toUpperCase() + '\\n*Duration:* ' + $json.duration }) }}"
+      },
+      "id": "chat_case",
+      "name": "Google Chat Case Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1750,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const failed = $input.item.json.failedCasesList || [];\nif(failed.length === 0) return [];\nreturn failed.map(c => ({ json: c }));"
+      },
+      "id": "split_failed",
+      "name": "Extract Failed Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1150,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "rca_loop",
+      "name": "RCA & Email Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "rca_wait",
+      "name": "Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1550,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const json = $input.item.json;\nconst prompt = `Analyze this UI crash:\\nTest Case: ${json.testTitle}\\nFile: ${json.filename}\\nError Details:\\n${json.error}\\nExplain the root cause concisely.`;\nreturn { json: { ...json, prompt } };"
+      },
+      "id": "prepare_prompt",
+      "name": "Prepare RCA Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1750,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=[REDACTED_GEMINI_KEY]",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"contents\": [ { \"parts\": [ { \"text\": $json.prompt } ] } ] }) }}",
+        "options": {
+          "responsePropertyName": "gemini_res"
+        }
+      },
+      "id": "ai_rca",
+      "name": "AI RCA (Gemini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1950,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nitem.aiAnalysis = item.gemini_res?.candidates?.[0]?.content?.parts?.[0]?.text || 'AI Analysis unavailable.';\nreturn { json: item };"
+      },
+      "id": "extract_ai",
+      "name": "Extract RCA text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2150,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.screenshotPath }}",
+              "operation": "notEqual",
+              "value2": ""
+            }
+          ]
+        }
+      },
+      "id": "has_screenshot",
+      "name": "Has Screenshot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2350,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "={{ $json.screenshotPath }}",
+        "options": {
+          "continueOnFail": true
+        }
+      },
+      "id": "read_screenshot",
+      "name": "Read Image",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        2550,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "email": "veeramani.b@algosium.com",
+        "subject": "={{ '🚨 Failed: ' + $json.testTitle }}",
+        "emailType": "html",
+        "message": "={{ \"<html><body><h2>❌ Failure Alert</h2><p><b>File:</b> \" + $json.filename + \"</p><p><b>Case:</b> \" + $json.testTitle + \"</p><h3>🤖 AI Root Cause Analysis:</h3><div>\" + $json.aiAnalysis.replace(/\\n/g, '<br>') + \"</div><h3>Logs:</h3><pre>\" + $json.error + \"</pre></body></html>\" }}",
+        "attachmentsUi": {
+          "attachmentsValues": [
+            {
+              "binaryPropertyName": "data"
+            }
+          ]
+        }
+      },
+      "id": "gmail_with_image",
+      "name": "Gmail Individual RCA (Img)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        2750,
+        600
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aFqA2wJ8eN1T2W6I",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "email": "veeramani.b@algosium.com",
+        "subject": "={{ '🚨 Failed: ' + $json.testTitle }}",
+        "emailType": "html",
+        "message": "={{ \"<html><body><h2>❌ Failure Alert (No Img)</h2><p><b>File:</b> \" + $json.filename + \"</p><p><b>Case:</b> \" + $json.testTitle + \"</p><h3>🤖 AI Root Cause Analysis:</h3><div>\" + $json.aiAnalysis.replace(/\\n/g, '<br>') + \"</div><h3>Logs:</h3><pre>\" + $json.error + \"</pre></body></html>\" }}"
+      },
+      "id": "gmail_no_image",
+      "name": "Gmail Individual RCA",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        2550,
+        850
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aFqA2wJ8eN1T2W6I",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '❌ *Failed:* ' + $json.testTitle + '\\n🤖 *RCA:* ' + $json.aiAnalysis }) }}"
+      },
+      "id": "chat_fail_case",
+      "name": "Google Chat Case RCA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2950,
+        700
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Init & Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init & Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Find Test Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Test Files": {
+      "main": [
+        [
+          {
+            "node": "Master Playwright Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Master Playwright Engine": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Summary & Failures",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Summary & Failures": {
+      "main": [
+        [
+          {
+            "node": "Gmail Final Dashboard",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract ALL Cases",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Failed Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract ALL Cases": {
+      "main": [
+        [
+          {
+            "node": "Chat Dispatch Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Dispatch Loop": {
+      "main": [
+        [
+          {
+            "node": "Chat Throttle Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Throttle Wait": {
+      "main": [
+        [
+          {
+            "node": "Google Chat Case Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Chat Case Status": {
+      "main": [
+        [
+          {
+            "node": "Chat Dispatch Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Failed Cases": {
+      "main": [
+        [
+          {
+            "node": "RCA & Email Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RCA & Email Loop": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Prepare RCA Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare RCA Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI RCA (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI RCA (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Extract RCA text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract RCA text": {
+      "main": [
+        [
+          {
+            "node": "Has Screenshot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Screenshot?": {
+      "main": [
+        [
+          {
+            "node": "Read Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Individual RCA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Image": {
+      "main": [
+        [
+          {
+            "node": "Gmail Individual RCA (Img)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Individual RCA (Img)": {
+      "main": [
+        [
+          {
+            "node": "Google Chat Case RCA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Individual RCA": {
+      "main": [
+        [
+          {
+            "node": "Google Chat Case RCA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Chat Case RCA": {
+      "main": [
+        [
+          {
+            "node": "RCA & Email Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

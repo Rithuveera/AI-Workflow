@@ -1,0 +1,118 @@
+{
+    "name": "Playwright Full Suite (Automated)",
+    "settings": {
+        "executionTimeout": -1
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (fs.existsSync(resultsDir)) {\n  fs.readdirSync(resultsDir).forEach(f => { try { fs.unlinkSync(path.join(resultsDir, f)); } catch (e) {} });\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\nreturn [{ json: { product: 'ERP', folder: 'ERP' } }];"
+            },
+            "id": "init",
+            "name": "Init & Cleanup",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst folder = $input.item.json.folder;\nconst fullPath = `c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/tests/${folder}`;\nconst files = fs.readdirSync(fullPath).filter(f => f.endsWith('.spec.js'));\nreturn files.map(f => ({ json: { product: 'ERP', filename: f, testPath: `tests/${folder}/${f}` } }));"
+            },
+            "id": "find_files",
+            "name": "Find Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nconst cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\nconst cwd = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow';\nconst startTime = new Date();\nlet stdout = '', stderr = '', exitCode = 0;\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe', timeout: 600000 }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\nconst duration = ((new Date() - startTime) / 1000).toFixed(2);\nlet stats = { total: 0, passed: 0, failed: 0 };\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    if (jsonData.stats) {\n      stats.passed = jsonData.stats.expected || 0;\n      stats.failed = jsonData.stats.unexpected || 0;\n      stats.total = stats.passed + stats.failed + (jsonData.stats.skipped || 0);\n    }\n  }\n} catch (e) {}\nconst combined = stdout + '\\\\n' + stderr;\nconst jsonStart = combined.lastIndexOf('{\"stats\":');\nconst logs = jsonStart !== -1 ? combined.substring(0, jsonStart).trim() : combined.trim();\nconst errorDetails = logs.replace(/\\\\[MCP\\\\] \u2705 Called \\\\\\/\\\\w+/g, '').trim();\nreturn { json: { ...item, exitCode, errorDetails: errorDetails || 'Passed', status: exitCode === 0 ? 'passed' : 'failed', duration: `${duration}s`, timestamp: new Date().toISOString(), stats } };"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "init",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "init": {
+            "main": [
+                [
+                    {
+                        "node": "find_files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "find_files": {
+            "main": [
+                [
+                    {
+                        "node": "loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "loop": {
+            "main": [
+                [
+                    {
+                        "node": "run_test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

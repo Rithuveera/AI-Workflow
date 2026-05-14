@@ -1,0 +1,284 @@
+{
+    "name": "Playwright Product-Wise Automation",
+    "settings": {
+        "executionTimeout": -1
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst SELECTED_PRODUCT = 'ERP';\nconst resultsDir = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (fs.existsSync(resultsDir)) {\n  fs.readdirSync(resultsDir).forEach(f => { try { fs.unlinkSync(path.join(resultsDir, f)); } catch (e) {} });\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\nconst products = {\n  'ERP': { product: 'ERP', folder: 'ERP', description: 'Run all ERP test scripts' },\n  'Camp': { product: 'Camp', folder: 'CampAccomodation', description: 'Run all Camp Accommodation test scripts' }\n};\nreturn [{ json: products[SELECTED_PRODUCT] }];"
+            },
+            "id": "product_selector",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst items = $input.all();\nconst product = items[0].json.product;\nconst folder = items[0].json.folder;\nconst fullPath = `c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/tests/${folder}`;\nconst returnData = [];\ntry {\n  if (!fs.existsSync(fullPath)) return [{ json: { product, folder, error: 'Dir not found', fileCount: 0 } }];\n  const testFiles = fs.readdirSync(fullPath).filter(f => f.endsWith('.spec.js'));\n  testFiles.forEach(file => {\n    returnData.push({ json: { product, folder, filename: file, fullPath: `${fullPath}/${file}`, testPath: `tests/${folder}/${file}` } });\n  });\n  return returnData;\n} catch (error) {\n  return [{ json: { product, folder, error: error.message, fileCount: 0 } }];\n}"
+            },
+            "id": "find_product_tests",
+            "name": "Find Product Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nif (item.error) return { json: { ...item, exitCode: -1, status: 'skipped', stats: { total: 0, passed: 0, failed: 0 } } };\nconst cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\nconst cwd = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow';\nconst startTime = new Date();\nlet stdout = '', stderr = '', exitCode = 0;\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe', timeout: 600000 }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\nconst duration = ((new Date() - startTime) / 1000).toFixed(2);\nlet testCases = [], stats = { total: 0, passed: 0, failed: 0 }, reportSummary = '', screenshotPath = null;\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    if (jsonData.stats) {\n      stats.passed = jsonData.stats.expected || 0;\n      stats.failed = jsonData.stats.unexpected || 0;\n      stats.total = stats.passed + stats.failed + (jsonData.stats.skipped || 0);\n    }\n    if (jsonData.suites) {\n      jsonData.suites.forEach(suite => {\n        (suite.specs || []).forEach(spec => {\n          spec.tests.forEach(test => {\n            const res = test.results && test.results[0];\n            if (res && res.attachments) {\n               const ss = res.attachments.find(a => a.name === 'screenshot');\n               if (ss && !screenshotPath) screenshotPath = ss.path;\n            }\n            testCases.push({ title: spec.title, status: res ? res.status : 'unknown' });\n          });\n        });\n      });\n    }\n    reportSummary = testCases.map(tc => `${tc.status === 'passed' ? '\u2705' : '\u274c'} ${tc.title}`).join('\\\\n');\n  }\n} catch (e) {}\nconst combined = stdout + '\\\\n' + stderr;\nconst jsonStart = combined.lastIndexOf('{\"stats\":');\nconst logs = jsonStart !== -1 ? combined.substring(0, jsonStart).trim() : combined.trim();\nconst errorDetails = logs.replace(/\\\\[MCP\\\\] \u2705 Called \\\\\\/\\\\w+/g, '').trim();\nreturn { json: { ...item, exitCode, errorDetails: errorDetails || (exitCode === 0 ? 'No errors' : 'Failed'), status: exitCode === 0 ? 'passed' : 'failed', duration: `${duration}s`, timestamp: new Date().toISOString(), stats, reportSummary, screenshotPath: screenshotPath ? (screenshotPath.includes(':') || screenshotPath.startsWith('/') ? screenshotPath : `${cwd}/${screenshotPath}`).replace(/\\\\/g, '/') : null } };"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '🎯 *Test:* ' + $json.filename + '\\n' + '*Status:* ' + ($json.status === 'passed' ? '✅' : '❌') + '\\n' + '*Summary:*\\n' + ($json.reportSummary || 'N/A') }}"
+                        }
+                    ]
+                }
+            },
+            "id": "google_chat_notification",
+            "name": "Google Chat Notification",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst testData = $node[\"Run Playwright Test\"].json;\nconst resultsDir = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst resultFile = path.join(resultsDir, `test_${Date.now()}_${testData.filename}.json`);\nfs.writeFileSync(resultFile, JSON.stringify(testData, null, 2));\nreturn [{ json: { ...testData, isFailed: testData.exitCode !== 0 } }];"
+            },
+            "id": "save_and_check",
+            "name": "Save Result & Check Failure",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.isFailed }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check_test_failure",
+            "name": "If Failed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "fileSelector": "={{ $json.screenshotPath }}"
+            },
+            "id": "read_screenshot",
+            "name": "Read Screenshot",
+            "type": "n8n-nodes-base.readBinaryFile",
+            "typeVersion": 1,
+            "position": [
+                1900,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '🚨 ' + $json.product + ' Failed: ' + $json.filename }}",
+                "emailType": "html",
+                "message": "={{ `<html><body style='font-family:sans-serif;background:#f5f5f5;padding:20px;'><div style='background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);'><h2 style='color:#d32f2f;'>🚨 Test Failure</h2><p><b>Product:</b> ${$json.product}</p><p><b>File:</b> ${$json.filename}</p><h3 style='color:#333;'>Error:</h3><pre style='background:#f5f5f5;padding:15px;border-radius:4px;font-size:12px;'>${$json.errorDetails}</pre></div></body></html>` }}",
+                "attachmentsUi": {
+                    "attachmentsValues": [
+                        {
+                            "binaryPropertyName": "data"
+                        }
+                    ]
+                }
+            },
+            "id": "email_alert",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                2150,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "product_selector",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "product_selector": {
+            "main": [
+                [
+                    {
+                        "node": "find_product_tests",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "find_product_tests": {
+            "main": [
+                [
+                    {
+                        "node": "test_loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "test_loop": {
+            "main": [
+                [
+                    {
+                        "node": "run_test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "run_test": {
+            "main": [
+                [
+                    {
+                        "node": "google_chat_notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "google_chat_notification": {
+            "main": [
+                [
+                    {
+                        "node": "save_and_check",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "save_and_check": {
+            "main": [
+                [
+                    {
+                        "node": "check_test_failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "check_test_failure": {
+            "main": [
+                [
+                    {
+                        "node": "read_screenshot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "test_loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "read_screenshot": {
+            "main": [
+                [
+                    {
+                        "node": "email_alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "email_alert": {
+            "main": [
+                [
+                    {
+                        "node": "test_loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

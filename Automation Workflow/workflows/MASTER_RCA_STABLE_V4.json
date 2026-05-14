@@ -1,0 +1,447 @@
+{
+    "name": "MASTER RCA STABLE V4",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\n\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));\n  for (const file of files) { try { fs.unlinkSync(path.join(resultsDir, file)); } catch (e) {} }\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\n\nreturn [{ json: { product: 'ERP', folder: 'ERP' } }];"
+            },
+            "id": "init",
+            "name": "Init & Cleanup",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst folder = $json.folder;\nconst fullPath = `c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/tests/${folder}`;\nconst allFiles = fs.readdirSync(fullPath).filter(f => f.endsWith('.spec.js'));\n\nreturn allFiles.map(f => ({\n    json: {\n        product: $json.product, \n        filename: f, \n        testPath: `tests/${folder}/${f}`\n    }\n}));"
+            },
+            "id": "find_tests",
+            "name": "Find Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const { execSync } = require('child_process');\nconst fs = require('fs');\nconst path = require('path');\nconst item = $input.item.json;\nconst cmd = `npx playwright test \"${item.testPath}\" --reporter=json`;\nconst cwd = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow';\nconst startTime = new Date();\nlet stdout = '', stderr = '', exitCode = 0;\n\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe' }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\n\nconst duration = ((new Date() - startTime) / 1000).toFixed(2);\nlet binaryData = null;\nlet stats = { total: 0, passed: 0, failed: 0 };\nlet testCases = [];\n\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    if (jsonData.stats) {\n        stats.passed = jsonData.stats.expected || 0;\n        stats.failed = jsonData.stats.unexpected || 0;\n        stats.total = stats.passed + stats.failed + (jsonData.stats.skipped || 0);\n    }\n    jsonData.suites?.forEach(s => s.specs?.forEach(sp => sp.tests?.forEach(t => {\n        const res = t.results?.[0];\n        testCases.push({ title: sp.title, status: res ? res.status : 'failed' });\n        const att = res?.attachments?.find(a => a.name === 'screenshot');\n        if (att && att.path && !binaryData) {\n            const src = att.path.includes(':') ? att.path : path.join(cwd, att.path);\n            if (fs.existsSync(src)) binaryData = fs.readFileSync(src).toString('base64');\n        }\n    })));\n  }\n} catch (e) {}\n\nconst cleanLogs = (stdout + '\\n' + stderr).trim().replace(/[\\u001b\\u009b][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\\\d]*(?:;[-a-zA-Z\\\\d\\/#&.:=?%@~_]*)*)?\\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))/g, '');\nlet finalStatus = exitCode === 0 && stats.failed === 0 ? 'passed' : 'failed';\nif (finalStatus === 'passed' && (cleanLogs.includes('Error:') || cleanLogs.includes('No Data Found'))) {\n    finalStatus = 'failed';\n    stats.failed = Math.max(1, stats.failed);\n}\n\nconst reportSummary = testCases.map(tc => `${tc.status === 'passed' ? '✅' : '❌'} ${tc.title}`).join('\\n');\n\nconst result = { \n    json: { \n        ...item, \n        status: finalStatus, \n        duration: `${duration}s`, \n        stats, \n        reportSummary, \n        errorLogs: cleanLogs.substring(0, 3500), \n        hasScreenshot: !!binaryData \n    } \n};\nif (binaryData) result.binary = { data: { data: binaryData, mimeType: 'image/png', fileName: 'screenshot.png' } };\nreturn result;"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                850,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.status }}",
+                            "operation": "equal",
+                            "value2": "failed"
+                        }
+                    ]
+                }
+            },
+            "id": "is_failed",
+            "name": "Is Failed?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return { json: { ...$input.item.json, prompt: `Analyze this automation failure:\\nFile: ${$json.filename}\\nLogs: ${$json.errorLogs}` } };"
+            },
+            "id": "prep_ai",
+            "name": "Prep AI Body",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1300,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=[REDACTED_GEMINI_KEY]",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={ \"contents\": [ { \"parts\": [ { \"text\": \"{{ $json.prompt }}\" } ] } ] }",
+                "options": {}
+            },
+            "id": "gemini_rca",
+            "name": "AI RCA: Gemini",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1500,
+                100
+            ],
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={ \"text\": \"🎯 *Product:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.product }}\\n🧪 *Test File:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.filename }}\\n*Status:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.status === 'passed' ? '✅ PASSED' : '❌ FAILED' }}\\n*Stats:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.stats.passed }}/{{ $item(0).$node[\\\"Run Playwright Test\\\"].json.stats.total }} passed\\n*Duration:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.duration }}\\n\\n*Test Cases:*\\n{{ $item(0).$node[\\\"Run Playwright Test\\\"].json.reportSummary }}\\n\\n🤖 *AI Analysis:*\\n{{ $json.candidates ? $json.candidates[0].content.parts[0].text : '⚠️ AI Analysis Unavailable' }}\" }"
+            },
+            "id": "chat_fail",
+            "name": "Google Chat Notification",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1750,
+                50
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $item(0).$node[\"Run Playwright Test\"].json.hasScreenshot }}",
+                            "operation": "equal",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "has_ss",
+            "name": "Has Screenshot?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1750,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "combinationMode": "position",
+                "outputDataFrom": "both"
+            },
+            "id": "merge_node",
+            "name": "Merge",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 2,
+            "position": [
+                2000,
+                150
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '🔴 Failed: ' + $item(0).$node[\"Run Playwright Test\"].json.filename }}",
+                "emailType": "html",
+                "message": "={{ '<h3>AI analysis</h3>' + ($node[\\\"AI RCA: Gemini\\\"].json.candidates ? $node[\\\"AI RCA: Gemini\\\"].json.candidates[0].content.parts[0].text : 'AI skipped.') + '<h3>Logs</h3><pre>' + $item(0).$node[\\\"Run Playwright Test\\\"].json.errorLogs + '</pre>' }}",
+                "attachmentsUi": {
+                    "attachmentsValues": [
+                        {
+                            "binaryPropertyName": "data"
+                        }
+                    ]
+                }
+            },
+            "id": "gmail_fail",
+            "name": "Gmail: Detailed Failure",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                2250,
+                150
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={ \"text\": \"🎯 *Product:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.product }}\\n🧪 *Test File:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.filename }}\\n*Status:* ✅ PASSED\\n*Stats:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.stats.passed }}/{{ $item(0).$node[\\\"Run Playwright Test\\\"].json.stats.total }} passed\\n*Duration:* {{ $item(0).$node[\\\"Run Playwright Test\\\"].json.duration }}\\n\\n*Test Cases:*\\n{{ $item(0).$node[\\\"Run Playwright Test\\\"].json.reportSummary }}\" }"
+            },
+            "id": "chat_pass",
+            "name": "Chat: Success",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1300,
+                350
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst data = $node[\"Run Playwright Test\"].json;\nconst fileName = `res_${Date.now()}_${Math.floor(Math.random()*1000)}.json`;\nconst filePath = path.join('c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results', fileName);\n\nfs.writeFileSync(filePath, JSON.stringify(data));\nreturn { json: data };"
+            },
+            "id": "save_res",
+            "name": "Save Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst dir = 'c:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));\n\nconst results = files.map(f => JSON.parse(fs.readFileSync(path.join(dir, f))));\nconst passed = results.filter(r => r.status === 'passed').length;\nconst failed = results.filter(r => r.status === 'failed').length;\n\nlet html = `<table border=\"1\"><tr><th>Test</th><th>Status</th><th>Duration</th></tr>`;\nresults.forEach(r => {\n  html += `<tr><td>${r.filename}</td><td style=\"color:${r.status === 'passed' ? 'green' : 'red'}\">${r.status}</td><td>${r.duration}</td></tr>`;\n});\nhtml += `</table>`;\n\nreturn { json: { total: results.length, passed, failed, html } };"
+            },
+            "id": "final_sum",
+            "name": "Final Summary Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                800,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "📊 Playwright Automation: Master Summary",
+                "emailType": "html",
+                "message": "={{ '<h2>Automation Run Completed</h2>' + '<p>Total Tests: ' + $json.total + '</p>' + '<p>Passed: ' + $json.passed + '</p>' + '<p>Failed: ' + $json.failed + '</p>' + $json.html }}"
+            },
+            "id": "gmail_sum",
+            "name": "Gmail: Master Summary",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "init",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "init": {
+            "main": [
+                [
+                    {
+                        "node": "find_tests",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "find_tests": {
+            "main": [
+                [
+                    {
+                        "node": "test_loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "test_loop": {
+            "main": [
+                [
+                    {
+                        "node": "run_test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "final_sum",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "run_test": {
+            "main": [
+                [
+                    {
+                        "node": "is_failed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "is_failed": {
+            "main": [
+                [
+                    {
+                        "node": "prep_ai",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "merge_node",
+                        "type": "main",
+                        "index": 1
+                    }
+                ],
+                [
+                    {
+                        "node": "chat_pass",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "prep_ai": {
+            "main": [
+                [
+                    {
+                        "node": "gemini_rca",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "gemini_rca": {
+            "main": [
+                [
+                    {
+                        "node": "chat_fail",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "has_ss",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "has_ss": {
+            "main": [
+                [
+                    {
+                        "node": "merge_node",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "save_res",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "merge_node": {
+            "main": [
+                [
+                    {
+                        "node": "gmail_fail",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "gmail_fail": {
+            "main": [
+                [
+                    {
+                        "node": "save_res",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "chat_pass": {
+            "main": [
+                [
+                    {
+                        "node": "save_res",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "save_res": {
+            "main": [
+                [
+                    {
+                        "node": "test_loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "final_sum": {
+            "main": [
+                [
+                    {
+                        "node": "gmail_sum",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -1,0 +1,93 @@
+{
+    "name": "ERP Automation Runner",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "When clicking \"Execute Workflow\"",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { script: \"tests/ERP/ProjectDashboard.spec.js\", name: \"Project Dashboard\" },\n  { script: \"tests/ERP/RelatedEnquiry.spec.js\", name: \"Related Enquiry\" },\n  { script: \"tests/ERP/Mailack.spec.js\", name: \"Mailack ERP\" },\n  { script: \"tests/Mailack.spec.js\", name: \"General Mailack\" },\n  { script: \"tests/\", name: \"Run All Tests\" }\n];"
+            },
+            "id": "list-scripts",
+            "name": "Select Script",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "={{ \"npx playwright test \\\"\" + $json.script + \"\\\"\" }}",
+                "cwd": "C:\\Users\\veeramani\\.gemini\\antigravity\\scratch\\Automation Workflow"
+            },
+            "id": "execute-playwright",
+            "name": "Run Playwright",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "general",
+                "text": "={{ '🚀 *Automation Script Executed*\\n\\n' + \n   '*Script:* ' + $Node[\"Select Script\"].json.name + '\\n' + \n   '*Path:* `' + $Node[\"Select Script\"].json.script + '`\\n' + \n   '*Status:* ' + ($json.exitCode === 0 ? '✅ Success' : '❌ Failed') + '\\n\\n' + \n   '*Console Output:*\\n```\\n' + ($json.stdout || $json.stderr || \"No output available\").substring(0, 3000) + '\\n```' }}",
+                "otherOptions": {}
+            },
+            "id": "slack-notify",
+            "name": "Slack Notification",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2,
+            "position": [
+                860,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "When clicking \"Execute Workflow\"": {
+            "main": [
+                [
+                    {
+                        "node": "Select Script",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Script": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright": {
+            "main": [
+                [
+                    {
+                        "node": "Slack Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

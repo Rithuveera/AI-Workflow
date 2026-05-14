@@ -1,0 +1,247 @@
+{
+    "name": "Playwright Automation Hub",
+    "settings": {
+        "executionTimeout": -1
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { json: { product: \"ERP\", folder: \"ERP\" } },\n  { json: { product: \"Camp\", folder: \"CampAccomodation\" } }\n];"
+            },
+            "id": "select",
+            "name": "Choose Suite",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "const fs = require('fs');\nconst allItems = $input.all();\nconst returnData = [];\n\nfor (const item of allItems) {\n  const f = item.json.folder;\n  const path = 'C:/Users/veeramani/desktop/playwright-mcp/tests/' + f;\n  \n  try {\n    if (fs.existsSync(path)) {\n      const files = fs.readdirSync(path).filter(x => x.endsWith('.spec.js'));\n      for (const file of files) {\n        returnData.push({\n          json: {\n            filename: file,\n            folder: f,\n            product: item.json.product\n          }\n        });\n      }\n    }\n  } catch (error) {\n    returnData.push({ json: { error: error.message, folder: f } });\n  }\n}\n\nreturn returnData;"
+            },
+            "id": "find",
+            "name": "Find Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "loop",
+            "name": "Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nconst folder = item.folder;\nconst filename = item.filename;\nconst cmd = `npx playwright test \"tests/${folder}/${filename}\"`;\nconst cwd = 'C:\\\\Users\\\\veeramani\\\\desktop\\\\playwright-mcp';\n\ntry {\n  const stdout = execSync(cmd, { cwd: cwd, stdio: 'pipe' }).toString();\n  return { json: { ...item, exitCode: 0, stdout: stdout, stderr: '' } };\n} catch (e) {\n  const err = e as any;\n  return { json: { ...item, exitCode: err.status || 1, stdout: (err.stdout || '').toString(), stderr: (err.stderr || err.message || '').toString() } };\n}"
+            },
+            "id": "run",
+            "name": "Run Playwright Command",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "general",
+                "text": "={{ '🧪 *Test:* ' + $json.filename + '\\n' + '*Result:* ' + ($json.exitCode === 0 ? '✅ Passed' : '❌ Failed') + '\\n\\n' + '```\\n' + ($json.stdout || $json.stderr || \"Finish\").substring(0, 400) + '\\n```' }}"
+            },
+            "id": "slack",
+            "name": "Slack Update",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2,
+            "position": [
+                1200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ Number($node[\"Run Playwright Command\"].json.exitCode) !== 0 }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check_failure",
+            "name": "Check Failure",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst logPath = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/AUTOMATION_ISSUES_LOG.md';\nconst sourceData = $node[\"Run Playwright Command\"].json;\nconst scriptName = sourceData.filename;\nconst exitCode = sourceData.exitCode;\nconst stdOut = (sourceData.stdout || \"\").substring(0, 500);\nconst stdErr = (sourceData.stderr || \"\").substring(0, 500);\nconst timestamp = new Date().toLocaleString();\n\nconst logContent = `\n## ❌ Issue Report\n**Time:** ${timestamp}\n**Script:** \\`${scriptName}\\`\n**Exit Code:** ${exitCode}\n\n**Output Snippet:**\n\\`\\`\\`\n${stdErr || stdOut || \"No output captured.\"}\n\\`\\`\\`\n---\n`;\n\nif (!fs.existsSync(logPath)) {\n  fs.writeFileSync(logPath, \"# 🐞 Automation Failure Log\\n\" + logContent);\n} else {\n  fs.appendFileSync(logPath, logContent);\n}\n\nreturn $input.all();"
+            },
+            "id": "log_issue",
+            "name": "Log Issue to File",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1700,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ \"🚨 Playwright Failure: \" + $node[\"Run Playwright Command\"].json.filename }}",
+                "emailType": "html",
+                "text": ""
+            },
+            "id": "email",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1950,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Choose Suite",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Choose Suite": {
+            "main": [
+                [
+                    {
+                        "node": "Find Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Command",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Command": {
+            "main": [
+                [
+                    {
+                        "node": "Slack Update",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Slack Update": {
+            "main": [
+                [
+                    {
+                        "node": "Check Failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Failure": {
+            "main": [
+                [
+                    {
+                        "node": "Log Issue to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Log Issue to File": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert": {
+            "main": [
+                [
+                    {
+                        "node": "Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

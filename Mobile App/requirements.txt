@@ -1,0 +1,6 @@
+python-dotenv
+google-generativeai
+Pillow
+opencv-python
+numpy
+PyYAML

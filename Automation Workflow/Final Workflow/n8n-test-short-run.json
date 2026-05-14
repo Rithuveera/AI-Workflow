@@ -1,0 +1,361 @@
+{
+    "name": "Playwright - TEST ONLY (2 Scripts)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst lockFile = path.join(resultsDir, 'summary.lock');\n\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));\n  for (const file of files) { try { fs.unlinkSync(path.join(resultsDir, file)); } catch (e) {} }\n  if (fs.existsSync(lockFile)) fs.unlinkSync(lockFile);\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\n\nreturn [{ json: { product: 'ERP', folder: 'ERP' } }];"
+            },
+            "id": "product_selector",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst items = $input.all();\nconst folder = items[0].json.folder;\nconst basePath = 'C:/Users/veeramani/desktop/playwright-mcp/tests';\nconst fullPath = `${basePath}/${folder}`;\n\nconst allFiles = fs.readdirSync(fullPath).filter(file => file.endsWith('.spec.js'));\nconst testFiles = allFiles.slice(0, 2);\n\nreturn testFiles.map(file => ({ json: { ...items[0].json, filename: file, testPath: `tests/${folder}/${file}` } }));"
+            },
+            "id": "find_tests",
+            "name": "Find Product Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\nconst cmd = `npx playwright test \"${item.testPath}\"`;\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\n\ntry {\n  execSync(cmd, { cwd, stdio: 'pipe', timeout: 300000 });\n  return { json: { ...item, exitCode: 0, status: 'passed' } };\n} catch (e) {\n  return { json: { ...item, exitCode: e.status || 1, status: 'failed', stderr: (e.stderr || e.message || '').toString() } };\n}"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQAUgZW7n0/messages?key=[REDACTED_GEMINI_KEY]&token=nGy6YN5gpv46KZqMY6TENlFcrwzPxt2ZWisA5ix9a3Y",
+                "sendBody": true,
+                "specifyBody": "keypair",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '🧪 *Test:* ' + $json.filename + '\\n' + '*Status:* ' + ($json.exitCode === 0 ? '✅ PASSED' : '❌ FAILED') }}"
+                        }
+                    ]
+                }
+            },
+            "id": "chat_notify",
+            "name": "Google Chat Notification",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1200,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst testData = $node[\"Run Playwright Test\"].json;\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst timestamp = Date.now();\nconst filename = `test_${timestamp}_${testData.filename}.json`;\nfs.writeFileSync(path.join(resultsDir, filename), JSON.stringify(testData, null, 2));\nreturn { json: testData };"
+            },
+            "id": "save_result",
+            "name": "Save Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.status === 'failed' }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "if_failed",
+            "name": "If Failed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1700,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '🚨 Failed: ' + $json.filename }}",
+                "message": "={{ $json.stderr || 'No error details' }}"
+            },
+            "id": "gmail_alert",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1950,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForAllItems",
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst lockFile = path.join(resultsDir, 'summary.lock');\n\nif (fs.existsSync(lockFile)) return { json: { alreadySent: true } };\nfs.writeFileSync(lockFile, 'locked');\n\nconst files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.json'));\nlet total = 0, passed = 0;\nfiles.forEach(file => {\n  const data = JSON.parse(fs.readFileSync(path.join(resultsDir, file)));\n  total++; if (data.exitCode === 0) passed++;\n});\n\nreturn { json: { alreadySent: false, total, passed, failed: total - passed, successRate: total > 0 ? ((passed/total)*100).toFixed(2) + '%' : '0%' } };"
+            },
+            "id": "generate_summary",
+            "name": "Generate Summary Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.alreadySent }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check_lock",
+            "name": "Already Sent?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1200,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQAUgZW7n0/messages?key=[REDACTED_GEMINI_KEY]&token=nGy6YN5gpv46KZqMY6TENlFcrwzPxt2ZWisA5ix9a3Y",
+                "sendBody": true,
+                "specifyBody": "keypair",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '📊 *Final Summary*\\n' + '✅ Passed: ' + $json.passed + '\\n' + '❌ Failed: ' + $json.failed + '\\n' + '🎯 Rate: ' + $json.successRate }}"
+                        }
+                    ]
+                }
+            },
+            "id": "chat_summary",
+            "name": "Google Chat Summary",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1450,
+                450
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '📊 Consolidated Test Summary - ' + $json.successRate }}",
+                "emailType": "html",
+                "message": "={{ \"<html><body><h2>📊 ERP Test Summary</h2><p><strong>Total:</strong> \" + $json.total + \"</p><p><strong>✅ Passed:</strong> \" + $json.passed + \"</p><p><strong>❌ Failed:</strong> \" + $json.failed + \"</p><p><strong>Success Rate:</strong> \" + $json.successRate + \"</p></body></html>\" }}"
+            },
+            "id": "gmail_summary",
+            "name": "Gmail Summary",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                600
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Select Product",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Product": {
+            "main": [
+                [
+                    {
+                        "node": "Find Product Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Product Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Test Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Generate Summary Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Test": {
+            "main": [
+                [
+                    {
+                        "node": "Google Chat Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Chat Notification": {
+            "main": [
+                [
+                    {
+                        "node": "Save Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Result": {
+            "main": [
+                [
+                    {
+                        "node": "If Failed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "If Failed": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Summary Report": {
+            "main": [
+                [
+                    {
+                        "node": "Already Sent?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Already Sent?": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Google Chat Summary",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Gmail Summary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

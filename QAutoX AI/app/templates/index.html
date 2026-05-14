@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QAutoX - AI Test Case Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet">
+    <meta name="description"
+        content="Automatically generate comprehensive test cases from requirement documents using Google Gemini AI">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/code_modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tabs.css') }}">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div class="brand">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="{{ url_for('static', filename='images/logo_icon.png') }}" alt="QAutoX"
+                                style="height: 56px; width: auto; filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));">
+                            <div class="logo">QAutoX</div>
+                        </div>
+                        <p class="tagline" style="margin-left: 68px; margin-top: -5px;">Automate. Analyze. Accelerate.
+                        </p>
+                    </div>
+                    {% if selected_product %}
+                    <div
+                        style="display: flex; align-items: center; gap: 10px; border-left: 1px solid #444; padding-left: 20px; height: 40px;">
+                        <span style="font-size: 0.9em; color: #fff; font-weight: 500;">
+                            {{ selected_product }}
+                        </span>
+                        <a href="{{ url_for('auth.select_product') }}" class="switch-product-btn"
+                            style="font-size: 0.75rem; color: #aaa; text-decoration: none; border: 1px solid #444; padding: 2px 8px; border-radius: 4px;">
+                            Switch
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    {% if current_user.is_authenticated %}
+                    <span style="color: #aaa; font-size: 0.9rem;">Hello, {{ current_user.username }}</span>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('admin.list_users') }}" class="btn btn-primary"
+                        style="padding: 5px 10px; font-size: 0.8rem;">Manage Users</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline"
+                        style="padding: 5px 10px; font-size: 0.8rem;">Logout</a>
+                    {% endif %}
+                </div>
+                <!-- <p class="tagline">10X Your Testing Efficiency with AI</p> -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="upload-card">
+                    <div class="upload-header">
+                        <h2>Upload Requirement Document</h2>
+                        <p>Upload your requirement document and let AI generate comprehensive test cases automatically
+                        </p>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="suiteNameInput" style="display: block; margin-bottom: 0.5rem; color: #ccc;">Test
+                                Suite / Module Name (Optional)</label>
+                            <input type="text" id="suiteNameInput" placeholder="e.g. Enquiry Module, Login Feature"
+                                style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="modelSelect" style="display: block; margin-bottom: 0.5rem; color: #ccc;">AI
+                                Model</label>
+                            <select id="modelSelect"
+                                style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Recommended)</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Exp</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📄</div>
+                        <h3>Drag & Drop your file here</h3>
+                        <p>or click to browse</p>
+                        <p class="file-types">Supported: PDF, DOCX, TXT (Max 16MB)</p>
+                        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" hidden>
+                        <button class="btn btn-primary" id="browseBtn">Browse Files</button>
+                    </div>
+
+                    <div style="text-align: center; margin: 1.5rem 0;">
+                        <span style="color: #666;">— OR —</span>
+                    </div>
+
+                    <div class="confluence-import-area"
+                        style="background: rgba(30, 30, 30, 0.5); padding: 1.5rem; border-radius: 8px; border: 1px solid #444;">
+                        <h4
+                            style="margin-top: 0; margin-bottom: 1rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                            <img src="https://v0.dev/placeholder.svg?height=20&width=20" alt="Confluence"
+                                style="height: 20px; width: 20px;">
+                            Import from Confluence
+                        </h4>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="confluenceUrlInput"
+                                placeholder="Enter Confluence Page URL or Page ID"
+                                style="flex: 1; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px;">
+                            <button class="btn btn-secondary" id="importConfluenceBtn">Import & Generate</button>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #888; margin-top: 8px;">
+                            Make sure your Confluence credentials are configured in the .env file.
+                        </p>
+                    </div>
+
+                    <div class="selected-file" id="selectedFile" style="display: none;">
+                        <div class="file-info">
+                            <span class="file-icon">📎</span>
+                            <span class="file-name" id="fileName"></span>
+                            <button class="btn-remove" id="removeFileBtn">✕</button>
+                        </div>
+                        <button class="btn btn-success" id="generateBtn">
+                            <span class="btn-icon">✨</span>
+                            Generate Test Cases with AI
+                        </button>
+                    </div>
+
+                    <div class="loading" id="loadingIndicator" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>AI is analyzing your requirements and generating test cases...</p>
+                        <p class="loading-subtext">This may take 10-30 seconds</p>
+                    </div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="stats-grid" id="statsSection" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <h3 id="totalTestCases">0</h3>
+                            <p>Total Test Cases</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-functional">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-content">
+                            <h3 id="functionalCount">0</h3>
+                            <p>Functional Tests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-nonfunctional">
+                        <div class="stat-icon">🔒</div>
+                        <div class="stat-content">
+                            <h3 id="nonFunctionalCount">0</h3>
+                            <p>Non-Functional Tests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔴</div>
+                        <div class="stat-content">
+                            <h3 id="highPriority">0</h3>
+                            <p>High Priority</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Type Breakdown -->
+                <div class="type-breakdown" id="typeBreakdown" style="display: none;">
+                    <h3>Test Type Distribution</h3>
+                    <div class="type-stats-grid">
+                        <div class="type-stat" id="performanceStat">
+                            <span class="type-badge badge-performance">⚡ Performance</span>
+                            <span class="type-count" id="performanceCount">0</span>
+                        </div>
+                        <div class="type-stat" id="securityStat">
+                            <span class="type-badge badge-security">🔐 Security</span>
+                            <span class="type-count" id="securityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="usabilityStat">
+                            <span class="type-badge badge-usability">👤 Usability</span>
+                            <span class="type-count" id="usabilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="reliabilityStat">
+                            <span class="type-badge badge-reliability">🛡️ Reliability</span>
+                            <span class="type-count" id="reliabilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="compatibilityStat">
+                            <span class="type-badge badge-compatibility">🔄 Compatibility</span>
+                            <span class="type-count" id="compatibilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="maintainabilityStat">
+                            <span class="type-badge badge-maintainability">🔧 Maintainability</span>
+                            <span class="type-count" id="maintainabilityCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Test Cases Section -->
+            <section class="test-cases-section" id="testCasesSection" style="display: none;">
+                <div class="section-header">
+                    <h2>Test Suite</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="exportBtn">
+                            <span class="btn-icon">📥</span>
+                            Export to Excel
+                        </button>
+                        <button class="btn btn-outline" id="refreshBtn">
+                            <span class="btn-icon">🗑️</span>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="test-cases">Generated Test Cases</button>
+                    <button class="tab-btn" data-tab="traceability">Traceability Matrix</button>
+                    <button class="tab-btn" data-tab="history">Test History</button>
+                    <button class="tab-btn" data-tab="execution">Test Execution (History)</button>
+                    <button class="tab-btn" data-tab="defects">Defects Management</button>
+                    <button class="tab-btn" data-tab="api-testing">API Testing (Beta)</button>
+                    <button class="tab-btn" data-tab="reports">Reports / Dashboard</button>
+                    <button class="tab-btn" data-tab="coverage">Coverage & Risk Map</button>
+                </div>
+
+                <!-- Tab Content: Test Cases -->
+                <div class="tab-content active" id="tab-test-cases">
+
+
+                    <!-- Filter Buttons -->
+                    <div class="filter-buttons" id="filterButtons" style="display: none;">
+                        <button class="filter-btn active" data-filter="all">All Tests</button>
+                        <button class="filter-btn" data-filter="Functional">⚙️ Functional</button>
+                        <button class="filter-btn" data-filter="Performance">⚡ Performance</button>
+                        <button class="filter-btn" data-filter="Security">🔐 Security</button>
+                        <button class="filter-btn" data-filter="Usability">👤 Usability</button>
+                        <button class="filter-btn" data-filter="Reliability">🛡️ Reliability</button>
+                        <button class="filter-btn" data-filter="Compatibility">🔄 Compatibility</button>
+                        <button class="filter-btn" data-filter="Maintainability">🔧 Maintainability</button>
+                    </div>
+
+                    <div class="test-cases-grid" id="testCasesGrid">
+                        <!-- Test cases will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Tab Content: Test History -->
+                <div class="tab-content" id="tab-history">
+                    <div class="section-header">
+                        <h2>Test Generation History</h2>
+                        <button class="btn btn-outline" id="refreshHistoryBtn">🔄 Refresh List</button>
+                    </div>
+                    <div class="test-cases-grid" id="historyGrid">
+                        <!-- History items will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Tab Content: Traceability Matrix -->
+                <div class="tab-content" id="tab-traceability">
+                    <div class="traceability-section" id="traceabilitySection">
+                        <div class="section-header">
+                            <h2>Traceability Matrix (RTM)</h2>
+                        </div>
+                        <div class="matrix-container" style="overflow-x: auto;">
+                            <table class="matrix-table" id="traceabilityMatrix"
+                                style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                                <thead>
+                                    <tr style="background: #333; color: #fff;">
+                                        <th style="padding: 1rem; text-align: left;">Requirement ID</th>
+                                        <th style="padding: 1rem; text-align: left;">Requirement Description</th>
+                                        <th style="padding: 1rem; text-align: left;">Test Case ID</th>
+                                        <th style="padding: 1rem; text-align: left;">Test Suite</th>
+                                        <th style="padding: 1rem; text-align: left;">Test Case Name</th>
+                                        <th style="padding: 1rem; text-align: center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="background: #252525;">
+                                    <!-- Matrix rows will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Test Execution -->
+                <div class="tab-content" id="tab-execution">
+
+                    <div class="execution-controls"
+                        style="background: #252525; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #444; display: flex; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <div style="flex: 1;">
+                            <label
+                                style="display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 0.3rem;">Execution
+                                Version / Cycle</label>
+                            <input type="text" id="executionVersion" value="Release 1.0" list="availableVersions"
+                                style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                            <datalist id="availableVersions"></datalist>
+                        </div>
+                        <div class="filter-buttons" style="margin-bottom: 0; justify-content: flex-end;">
+                            <button class="filter-btn active" id="refreshExecutionBtn" style="width: auto;">
+                                🔄 Refresh List
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="executionGrid" class="test-cases-grid">
+                        <!-- History items will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Tab Content: Defects -->
+                <div class="tab-content" id="tab-defects">
+                    <div class="section-header">
+                        <h2>Active Defects</h2>
+                        <button class="btn btn-outline" id="refreshDefectsBtn">🔄 Refresh List</button>
+                    </div>
+                    <div class="test-cases-grid" id="defectsGrid">
+                        <!-- Defects will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Tab Content: API Testing -->
+                <div class="tab-content" id="tab-api-testing">
+                    <div class="section-header">
+                        <h2>API Testing</h2>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" id="runAllApiBtn">
+                                <span class="btn-icon">▶️</span> Run All API Tests
+                            </button>
+                            <button class="btn btn-outline" id="clearApiBtn">
+                                <span class="btn-icon">🗑️</span> Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- API Upload Section -->
+                    <div class="api-upload-card"
+                        style="background: #252525; padding: 2rem; border-radius: 12px; border: 1px dashed #444; margin-bottom: 2rem; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🚀</div>
+                        <h3>Import API Specification</h3>
+                        <p style="color: #aaa; margin-bottom: 1.5rem;">Upload Swagger (JSON/YAML), OpenAPI, or Postman
+                            Collection</p>
+
+                        <div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
+                            <input type="file" id="apiSpecInput" accept=".json,.yaml,.yml" hidden>
+                            <button class="btn btn-secondary" onclick="document.getElementById('apiSpecInput').click()">
+                                Select API Spec File
+                            </button>
+                            <button class="btn btn-success" id="generateApiBtn" style="display: none;">
+                                <span class="btn-icon">✨</span> Generate API Tests
+                            </button>
+                        </div>
+                        <div id="selectedApiFile"
+                            style="margin-top: 1rem; color: #6366f1; font-weight: 500; display: none;"></div>
+                    </div>
+
+                    <div id="apiLoadingIndicator" style="display: none; text-align: center; padding: 2rem;">
+                        <div class="spinner"></div>
+                        <p>AI is analyzing your API specification and generating test cases...</p>
+                    </div>
+
+                    <div id="apiTestCasesGrid" class="test-cases-grid">
+                        <!-- API Test cases will be inserted here -->
+                        <div class="no-data" style="text-align: center; padding: 3rem; color: #666; grid-column: 1/-1;">
+                            <p>No API test cases generated yet. Upload a specification to get started.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Reports -->
+                <div class="tab-content" id="tab-reports">
+                    <div class="section-header">
+                        <h2>Execution Reports</h2>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                <label for="versionSelector" style="font-size: 0.8rem; color: #aaa;">Filter by
+                                    Version:</label>
+                                <select id="versionSelector"
+                                    style="padding: 8px 12px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; min-width: 200px;">
+                                    <option value="overall">Overall (All Versions)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="refreshReportsBtn" style="margin-top: 1.2rem;">🔄
+                                Refresh Reports</button>
+                        </div>
+                    </div>
+                    <div id="reportsContainer" style="display: grid; gap: 2rem;">
+                        <!-- Charts will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Tab Content: Coverage Map -->
+                <div class="tab-content" id="tab-coverage">
+                    <div class="section-header">
+                        <h2>Requirement Coverage & Risk Map</h2>
+                        <button class="btn btn-outline" id="refreshCoverageBtn">🔄 Analyze Coverage</button>
+                    </div>
+
+                    <div id="coverageDashboard">
+                        <div class="coverage-header"
+                            style="background: rgba(30,30,30,0.5); padding: 2rem; border-radius: 12px; border: 1px solid #444; margin-bottom: 2rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div>
+                                    <h3
+                                        style="margin: 0; color: #aaa; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">
+                                        Overall Coverage Score</h3>
+                                    <div class="coverage-score" id="overallCoverageScore">0%</div>
+                                    <p style="margin: 5px 0 0 0; color: #888;">Percentage of requirements with at least
+                                        one passing test case.</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div id="coverageStatsSummary" style="display: flex; gap: 20px;">
+                                        <div>
+                                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--secondary);"
+                                                id="coveredReqCount">0</div>
+                                            <div style="font-size: 0.8rem; color: #888;">Covered</div>
+                                        </div>
+                                        <div style="border-left: 1px solid #444; padding-left: 20px;">
+                                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--danger);"
+                                                id="gapReqCount">0</div>
+                                            <div style="font-size: 0.8rem; color: #888;">Gaps Found</div>
+                                        </div>
+                                        <div style="border-left: 1px solid #444; padding-left: 20px;">
+                                            <div style="font-size: 1.5rem; font-weight: bold; color: #fff;"
+                                                id="totalReqCount">0</div>
+                                            <div style="font-size: 0.8rem; color: #888;">Total Req</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="gapAnalysisContainer">
+                            <!-- Critical Gaps will be shown here -->
+                        </div>
+
+                        <div style="margin-top: 2rem;">
+                            <h3 style="margin-bottom: 1rem;">Requirements Heatmap</h3>
+                            <div class="coverage-grid" id="coverageGrid">
+                                <!-- Reqs will be shown as a grid of status boxes here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- Fail Modal -->
+    <div class="modal" id="failModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>❌ Mark Test Failed</h2>
+                <button class="modal-close" id="closeFailModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="failForm">
+                    <input type="hidden" id="failTestCaseId">
+                    <div class="form-group">
+                        <label for="failDefectId">Defect ID / JIRA Key</label>
+                        <input type="text" id="failDefectId" placeholder="e.g. BUG-1023">
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label for="failComments">Comments / Failure Analysis *</label>
+                            <button type="button" id="aiDefectBtn"
+                                style="font-size: 0.8rem; padding: 2px 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                ✨ Generate with AI
+                            </button>
+                        </div>
+                        <textarea id="failComments" rows="3" required
+                            placeholder="Describe why it failed..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="failEvidence">Evidence (Screenshot) - Optional</label>
+                        <input type="file" id="failEvidence" accept="image/*,.pdf"
+                            style="background: #333; color: #fff; border: 1px solid #555;">
+                    </div>
+                    <div class="form-actions" style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-outline" id="cancelFailBtn"
+                            style="flex: 1;">Cancel</button>
+                        <button type="button" class="btn btn-secondary" id="pushJiraBtn"
+                            style="flex: 1; background: #0052cc;">
+                            <img src="https://w7.pngwing.com/pngs/423/835/png-transparent-jira-hd-logo.png"
+                                style="width: 16px; height: 16px; margin-right: 5px; border-radius: 2px;">
+                            Push to Jira
+                        </button>
+                        <button type="submit" class="btn btn-danger" style="flex: 1;">Confirm Failed</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Test Case</h2>
+                <button class="modal-close" id="closeModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editTestCaseId">
+
+                    <div class="form-group">
+                        <label for="editTestCaseName">Test Case Name *</label>
+                        <input type="text" id="editTestCaseName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDescription">Description</label>
+                        <textarea id="editDescription" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editPriority">Priority *</label>
+                            <select id="editPriority" required>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editTestType">Test Type *</label>
+                            <select id="editTestType" required>
+                                <option value="Functional">Functional</option>
+                                <option value="Integration">Integration</option>
+                                <option value="Performance">Performance</option>
+                                <option value="Security">Security</option>
+                                <option value="Usability">Usability</option>
+                                <option value="Regression">Regression</option>
+                                <option value="Reliability">Reliability</option>
+                                <option value="Compatibility">Compatibility</option>
+                                <option value="Maintainability">Maintainability</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editStatus">Status</label>
+                        <select id="editStatus">
+                            <option value="Not Executed">Not Executed</option>
+                            <option value="Passed">Passed</option>
+                            <option value="Failed">Failed</option>
+                            <option value="Blocked">Blocked</option>
+                            <option value="Skipped">Skipped</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPreconditions">Preconditions</label>
+                        <textarea id="editPreconditions" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editTestSteps">Test Steps *</label>
+                        <textarea id="editTestSteps" rows="5" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editExpectedResult">Expected Result *</label>
+                        <textarea id="editExpectedResult" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code View Modal -->
+    <div class="modal" id="codeModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>Generated Automation Script</h2>
+                <button class="modal-close" id="closeCodeModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="code-options"
+                    style="margin-bottom: 1rem; padding: 1rem; background: #2d2d2d; border-radius: 8px; border: 1px solid #444;">
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="targetUrlInput" style="display: block; color: #fff; margin-bottom: 0.5rem;">Target
+                            Application URL (Optional)</label>
+                        <input type="text" id="targetUrlInput"
+                            placeholder="e.g. http://localhost:3000 or https://example.com"
+                            style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                        <p style="font-size: 0.8rem; color: #888; margin-top: 4px;">If provided, the generated script
+                            will use this URL.</p>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="autoUsername"
+                                style="display: block; color: #fff; margin-bottom: 0.5rem;">Username (Optional)</label>
+                            <input type="text" id="autoUsername" placeholder="e.g. testuser@example.com"
+                                style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="autoPassword"
+                                style="display: block; color: #fff; margin-bottom: 0.5rem;">Password (Optional)</label>
+                            <input type="password" id="autoPassword" placeholder="Enter password"
+                                style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                        </div>
+                    </div>
+
+                    <h4 style="color: #fff; margin-top: 0;">🚀 Improve Accuracy (Optional)</h4>
+                    <p style="font-size: 0.9rem; color: #aaa; margin-bottom: 0.8rem;">
+                        Upload a screenshot of the page to get <b>exact visual locators</b> (e.g., button names,
+                        labels).
+                    </p>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="screenshotInput" accept="image/*" class="form-control"
+                            style="width: auto; background: #1e1e1e; color: #fff; border-color: #444;">
+                        <button class="btn btn-primary btn-sm" id="regenerateBtn">
+                            Regenerate Script
+                        </button>
+                    </div>
+                </div>
+                <div class="code-header">
+                    <span class="code-lang">JavaScript (Playwright)</span>
+                    <div class="code-actions"
+                        style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: flex-end;">
+                        <button class="btn btn-outline" id="copyCodeBtn">
+                            <span class="btn-icon">📋</span> Copy Code
+                        </button>
+                        <button class="btn btn-success" id="runScriptBtn">
+                            <span class="btn-icon">▶️</span> Run Script
+                        </button>
+                    </div>
+                </div>
+                <pre><code id="automationCode" class="language-javascript"></code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/automation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api_testing.js') }}"></script>
+
+    <style>
+        .method-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .status-passed {
+            color: #28a745;
+        }
+
+        .status-failed {
+            color: #dc3545;
+        }
+
+        .spinner-sm {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</body>
+
+</html>

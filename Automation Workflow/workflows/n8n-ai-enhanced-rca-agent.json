@@ -1,0 +1,112 @@
+{
+    "name": "Playwright - AI RCA Agent (Bulletproof Version)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ai-rca-trigger",
+                "options": {}
+            },
+            "id": "webhook_trigger",
+            "name": "Webhook (Receive Error)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const body = item.json.body || {};\n  const rawError = body.error || '';\n  const cleanError = rawError.replace(/[\\u001b\\u009b][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\\\d]*(?:;[-a-zA-Z\\\\d\\/#&.:=?%@~_]*)*)?\\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))/g, '');\n  return {\n    json: {\n      ...body,\n      cleanError: cleanError.substring(0, 3000) \n    }\n  };\n});"
+            },
+            "id": "clean_logs",
+            "name": "Clean Error Logs",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                220,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Analyze this Playwright failure and provide a 3-sentence summary for a developer.\\nFile: \" + ($json.filename || \"Unknown\") + \"\\nError: \" + ($json.cleanError || \"Unknown Error\") + \"\\n\\nFormat:\\n🔍 Analysis: ...\\n🛠️ Recommendation: ...\"\n        }\n      ]\n    }\n  ]\n}) }}",
+                "options": {}
+            },
+            "id": "ai_analysis_http",
+            "name": "AI Analysis (Gemini API)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                450,
+                300
+            ],
+            "retryOnFail": true,
+            "maxTries": 5,
+            "waitBetweenTries": 5000
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQA7T2tWaY/messages?key=[REDACTED_GEMINI_KEY]&token=C0TOQS1FN_tbUfIeUHwat0Zwa9UXylCX97CKTIO4PKI",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '🤖 *AI Root Cause Analysis Report*\\n' +\n'────────────────────────\\n' +\n'🧪 *Failed:* ' + $node[\"Clean Error Logs\"].json.filename + '\\n' +\n'📌 *Case:* ' + ($node[\"Clean Error Logs\"].json.title || 'Unknown') + '\\n\\n' +\n$json.candidates[0].content.parts[0].text + '\\n' +\n'────────────────────────\\n' +\n'📅 *Time:* ' + new Date().toLocaleString() }}"
+                        }
+                    ]
+                }
+            },
+            "id": "chat_report",
+            "name": "AI Report to Google Chat",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                700,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook (Receive Error)": {
+            "main": [
+                [
+                    {
+                        "node": "Clean Error Logs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Clean Error Logs": {
+            "main": [
+                [
+                    {
+                        "node": "AI Analysis (Gemini API)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Analysis (Gemini API)": {
+            "main": [
+                [
+                    {
+                        "node": "AI Report to Google Chat",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

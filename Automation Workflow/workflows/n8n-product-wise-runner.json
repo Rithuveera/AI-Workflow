@@ -1,0 +1,93 @@
+{
+    "name": "Product-Wise Playwright Runner (Desktop)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "When clicking \"Execute Workflow\"",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "return [\n  { product: \"ERP\", path: \"tests/ERP/\", description: \"Run all ERP scripts (21 tests)\" },\n  { product: \"Camp Accommodation\", path: \"tests/CampAccomodation/\", description: \"Run all Camp scripts (10 tests)\" },\n  { product: \"Full Suite\", path: \"tests/\", description: \"Run everything in the project\" }\n];"
+            },
+            "id": "select-product",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "command": "={{ \"npx playwright test \\\"\" + $json.path + \"\\\" --reporter=line\" }}",
+                "cwd": "C:\\Users\\veeramani\\desktop\\playwright-mcp"
+            },
+            "id": "execute-playwright",
+            "name": "Run Playwright",
+            "type": "n8n-nodes-base.executeCommand",
+            "typeVersion": 1,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "general",
+                "text": "={{ '📦 *Product Automation Result*\\n' + \n   '*Product:* ' + $Node[\"Select Product\"].json.product + '\\n' + \n   '*Target Folder:* `' + $Node[\"Select Product\"].json.path + '`\\n' + \n   '*Status:* ' + ($json.exitCode === 0 ? '✅ All Tests Passed' : '❌ Some Tests Failed') + '\\n\\n' + \n   '*Output Details:*\\n```\\n' + ($json.stdout || $json.stderr || \"Running tests...\").substring(0, 3000) + '\\n```' }}",
+                "otherOptions": {}
+            },
+            "id": "slack-notify",
+            "name": "Slack Notification",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 2,
+            "position": [
+                860,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "When clicking \"Execute Workflow\"": {
+            "main": [
+                [
+                    {
+                        "node": "Select Product",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Product": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright": {
+            "main": [
+                [
+                    {
+                        "node": "Slack Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

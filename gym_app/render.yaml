@@ -1,0 +1,14 @@
+services:
+  # Backend API Server
+  - type: web
+    name: fit2fit-gym-api
+    env: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /api/members

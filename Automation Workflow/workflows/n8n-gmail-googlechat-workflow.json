@@ -1,0 +1,402 @@
+{
+    "name": "Playwright Gmail & Google Chat Automation",
+    "settings": {
+        "executionTimeout": -1
+    },
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// ========================================\n// SELECT PRODUCT & CLEANUP\n// ========================================\nconst fs = require('fs');\nconst path = require('path');\n\n// 1. SELECT THE PRODUCT TO TEST\n// Options: 'ERP' or 'Camp'\nconst SELECTED_PRODUCT = 'ERP';\n\n// 2. CLEANUP PREVIOUS RESULTS\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir);\n  for (const file of files) {\n    try {\n      fs.unlinkSync(path.join(resultsDir, file));\n    } catch (e) { /* ignore cleanup errors */ }\n  }\n} else {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\n\n// 3. RETURN SELECTED PRODUCT DATA\nconst products = {\n  'ERP': {\n    product: 'ERP',\n    folder: 'ERP',\n    description: 'Run all ERP test scripts'\n  },\n  'Camp': {\n    product: 'Camp',\n    folder: 'CampAccomodation',\n    description: 'Run all Camp Accommodation test scripts'\n  }\n};\n\nreturn [{ json: products[SELECTED_PRODUCT] }];"
+            },
+            "id": "product_selector",
+            "name": "Select Product",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\n\n// Get the product info from previous node\nconst items = $input.all();\n\nif (!items || items.length === 0) {\n  throw new Error('No input data received from Select Product node');\n}\n\nconst firstItem = items[0];\n\nif (!firstItem.json || typeof firstItem.json !== 'object') {\n  throw new Error('Invalid data structure: json property must be an object');\n}\n\nconst product = firstItem.json.product;\nconst folder = firstItem.json.folder;\n\nif (!product || !folder) {\n  throw new Error('Missing product or folder information');\n}\n\nconst basePath = 'C:/Users/veeramani/desktop/playwright-mcp/tests';\nconst fullPath = `${basePath}/${folder}`;\n\nconst returnData = [];\n\ntry {\n  // Check if directory exists\n  if (!fs.existsSync(fullPath)) {\n    return [{\n      json: {\n        product: product,\n        folder: folder,\n        error: `Directory not found: ${fullPath}`,\n        fileCount: 0\n      }\n    }];\n  }\n\n  // Read all .spec.js files\n  const allFiles = fs.readdirSync(fullPath);\n  const testFiles = allFiles.filter(file => file.endsWith('.spec.js'));\n\n  if (testFiles.length === 0) {\n    return [{\n      json: {\n        product: product,\n        folder: folder,\n        error: 'No .spec.js test files found in directory',\n        fileCount: 0,\n        path: fullPath\n      }\n    }];\n  }\n\n  // Create an item for each test file\n  for (const file of testFiles) {\n    returnData.push({\n      json: {\n        product: product,\n        folder: folder,\n        filename: file,\n        fullPath: `${fullPath}/${file}`,\n        testPath: `tests/${folder}/${file}`\n      }\n    });\n  }\n\n  return returnData;\n\n} catch (error) {\n  return [{\n    json: {\n      product: product,\n      folder: folder,\n      error: `Error reading directory: ${error.message}`,\n      fileCount: 0\n    }\n  }];\n}"
+            },
+            "id": "find_product_tests",
+            "name": "Find Product Test Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "test_loop",
+            "name": "Test Loop",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\n\n// Check if there's an error from previous step\nif (item.error) {\n  return {\n    json: {\n      ...item,\n      exitCode: -1,\n      stdout: '',\n      stderr: item.error,\n      status: 'skipped'\n    }\n  };\n}\n\nconst product = item.product;\nconst folder = item.folder;\nconst filename = item.filename;\nconst testPath = item.testPath;\nconst cmd = `npx playwright test \"${testPath}\"`;\nconst cwd = 'C:\\\\Users\\\\veeramani\\\\desktop\\\\playwright-mcp';\n\nconst startTime = new Date();\n\ntry {\n  const stdout = execSync(cmd, { \n    cwd: cwd, \n    stdio: 'pipe',\n    timeout: 300000 // 5 minutes timeout\n  }).toString();\n  \n  const endTime = new Date();\n  const duration = ((endTime - startTime) / 1000).toFixed(2);\n  \n  return {\n    json: {\n      ...item,\n      exitCode: 0,\n      stdout: stdout,\n      stderr: '',\n      status: 'passed',\n      duration: `${duration}s`,\n      timestamp: new Date().toISOString()\n    }\n  };\n} catch (e) {\n  const err = e;\n  const endTime = new Date();\n  const duration = ((endTime - startTime) / 1000).toFixed(2);\n  \n  return {\n    json: {\n      ...item,\n      exitCode: err.status || 1,\n      stdout: (err.stdout || '').toString(),\n      stderr: (err.stderr || err.message || '').toString(),\n      status: 'failed',\n      duration: `${duration}s`,\n      timestamp: new Date().toISOString()\n    }\n  };\n}"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQAUgZW7n0/messages?key=[REDACTED_GEMINI_KEY]&token=nGy6YN5gpv46KZqMY6TENlFcrwzPxt2ZWisA5ix9a3Y",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": []
+                },
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '\ud83c\udfaf *Product:* ' + $json.product + '\\n' + '\ud83e\uddea *Test:* ' + $json.filename + '\\n' + '*Status:* ' + ($json.exitCode === 0 ? '\u2705 PASSED' : '\u274c FAILED') + '\\n' + '*Duration:* ' + ($json.duration || 'N/A') }}"
+                        }
+                    ]
+                },
+                "options": {},
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "keypair"
+            },
+            "id": "google_chat_notification",
+            "name": "Google Chat Notification",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\n\n// CRITICAL FIX: Use the data from the 'Run Playwright Test' node directly,\n// NOT from the Slack Notification response (which is just an API status).\nconst testData = $node[\"Run Playwright Test\"].json;\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\n\n// Create directory if it doesn't exist\nif (!fs.existsSync(resultsDir)) {\n  fs.mkdirSync(resultsDir, { recursive: true });\n}\n\n// Save this test result with a timestamp to avoid collisions\nconst timestamp = Date.now();\nconst resultFile = path.join(resultsDir, `test_${timestamp}_${testData.filename}.json`);\nfs.writeFileSync(resultFile, JSON.stringify(testData, null, 2));\n\n// Check if test failed - strictly based on exitCode (0 = pass)\nconst exitCode = typeof testData.exitCode === 'number' ? testData.exitCode : parseInt(testData.exitCode || '0', 10);\nconst isFailed = (exitCode !== 0);\n\nreturn [{ json: { ...testData, isFailed: isFailed } }];"
+            },
+            "id": "save_and_check",
+            "name": "Save Result & Check Failure",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.isFailed }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check_test_failure",
+            "name": "If Failed",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst logDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/logs';\nconst sourceData = $input.first().json;\nconst product = sourceData.product;\nconst scriptName = sourceData.filename;\nconst exitCode = sourceData.exitCode;\nconst stdOut = (sourceData.stdout || \"\").substring(0, 1000);\nconst stdErr = (sourceData.stderr || \"\").substring(0, 1000);\nconst duration = sourceData.duration || 'N/A';\nconst timestamp = new Date().toLocaleString();\n\n// Create logs directory if it doesn't exist\nif (!fs.existsSync(logDir)) {\n  fs.mkdirSync(logDir, { recursive: true });\n}\n\n// Create product-specific log file\nconst logPath = `${logDir}/${product}_FAILURES.md`;\n\nconst logContent = `\n## \u274c Test Failure Report\n**Timestamp:** ${timestamp}\n**Product:** ${product}\n**Test Script:** \\`${scriptName}\\`\n**Exit Code:** ${exitCode}\n**Duration:** ${duration}\n\n### Error Output:\n\\`\\`\\`\n${stdErr || 'No error output'}\n\\`\\`\\`\n\n### Standard Output:\n\\`\\`\\`\n${stdOut || 'No standard output'}\n\\`\\`\\`\n\n---\n`;\n\nif (!fs.existsSync(logPath)) {\n  const header = `# \ud83d\udc1e ${product} Test Failure Log\\n\\nThis file contains all test failures for the ${product} product.\\n\\n---\\n`;\n  fs.writeFileSync(logPath, header + logContent);\n} else {\n  fs.appendFileSync(logPath, logContent);\n}\n\nreturn $input.all();"
+            },
+            "id": "log_failure",
+            "name": "Log Failure to File",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1900,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ \"\ud83d\udea8 \" + $json.product + \" Test Failed: \" + $json.filename }}",
+                "emailType": "html",
+                "message": "={{ \"<html><body style='font-family: Arial, sans-serif;'><div style='max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;'><div style='background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'><h2 style='color: #d32f2f; margin-top: 0;'>\ud83d\udea8 Test Failure Alert</h2><div style='background-color: #ffebee; padding: 15px; border-left: 4px solid #d32f2f; margin: 20px 0;'><p style='margin: 5px 0;'><strong>Product:</strong> \" + $json.product + \"</p><p style='margin: 5px 0;'><strong>Test Script:</strong> <code>\" + $json.filename + \"</code></p><p style='margin: 5px 0;'><strong>Exit Code:</strong> \" + $json.exitCode + \"</p><p style='margin: 5px 0;'><strong>Duration:</strong> \" + ($json.duration || 'N/A') + \"</p><p style='margin: 5px 0;'><strong>Timestamp:</strong> \" + $json.timestamp + \"</p></div><h3 style='color: #333;'>Error Details:</h3><pre style='background-color: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px;'>\" + (($json.stderr || $json.stdout || 'No output captured').substring(0, 800)) + \"</pre><p style='color: #666; font-size: 12px; margin-top: 20px;'>This is an automated alert from the Playwright Product-Wise Automation workflow.</p></div></div></body></html>\" }}"
+            },
+            "id": "email_alert",
+            "name": "Gmail Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                2150,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst path = require('path');\n\n// ========================================\n// GENERATE SUMMARY FROM SAVED RESULTS\n// ========================================\n\nconst resultsDir = 'C:/Users/veeramani/.gemini/antigravity/scratch/Automation Workflow/temp_results';\nconst testResults = [];\nlet product = 'Unknown';\nlet hasResults = false;\n\n// Read all test result files\nif (fs.existsSync(resultsDir)) {\n  const files = fs.readdirSync(resultsDir).filter(f => f.startsWith('test_') && f.endsWith('.json'));\n  \n  if (files.length > 0) {\n    hasResults = true;\n    for (const file of files) {\n      try {\n        const filePath = path.join(resultsDir, file);\n        const content = fs.readFileSync(filePath, 'utf8');\n        const parsed = JSON.parse(content);\n        testResults.push(parsed);\n        \n        // Capture the correct product name\n        if (product === 'Unknown' && parsed.product) {\n          product = parsed.product;\n        }\n      } catch (e) { /* ignore invalid files */ }\n    }\n    \n    // Clean up temp files after reading\n    for (const file of files) {\n      try { fs.unlinkSync(path.join(resultsDir, file)); } catch (e) {}\n    }\n  }\n}\n\nif (!hasResults) {\n  return [{ json: { skipSummary: true } }];\n}\n\n// Calculate statistics robustly\nconst total = testResults.length;\nconst passed = testResults.filter(t => {\n  // Check status string OR exit code 0\n  return t.status === 'passed' || t.exitCode === 0 || t.exitCode === \"0\";\n}).length;\nconst failed = total - passed;\nconst successRate = total > 0 ? ((passed / total) * 100).toFixed(2) : 0;\n\n// Calculate total duration\nconst totalDuration = testResults.reduce((sum, test) => {\n  const durationStr = (test.duration || '0s').toString().replace('s', '');\n  const duration = parseFloat(durationStr) || 0;\n  return sum + duration;\n}, 0).toFixed(2);\n\nreturn [{ json: {\n  skipSummary: false,\n  product: product,\n  total: total,\n  passed: passed,\n  failed: failed,\n  successRate: `${successRate}%`,\n  totalDuration: `${totalDuration}s`,\n  timestamp: new Date().toISOString()\n}}];"
+            },
+            "id": "generate_summary",
+            "name": "Generate Summary Report",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.skipSummary === true }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check_has_results",
+            "name": "Check If Results Exist",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1700,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://chat.googleapis.com/v1/spaces/AAQAUgZW7n0/messages?key=[REDACTED_GEMINI_KEY]&token=nGy6YN5gpv46KZqMY6TENlFcrwzPxt2ZWisA5ix9a3Y",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": []
+                },
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ '\ud83d\udcca *' + $json.product + ' Test Suite Summary*\\n\\n' + '\u2705 Passed: ' + $json.passed + '\\n' + '\u274c Failed: ' + $json.failed + '\\n' + '\ud83d\udcc8 Total Tests: ' + $json.total + '\\n' + '\ud83c\udfaf Success Rate: ' + $json.successRate + '\\n' + '\u23f1\ufe0f Total Duration: ' + $json.totalDuration }}"
+                        }
+                    ]
+                },
+                "options": {},
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "keypair"
+            },
+            "id": "google_chat_summary",
+            "name": "Google Chat Summary",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1950,
+                50
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '\ud83d\udcca ' + $json.product + ' Test Summary - ' + $json.successRate + ' Pass Rate' }}",
+                "emailType": "html",
+                "message": "={{ \"<html><body><h2>\ud83d\udcca \" + $json.product + \" Test Summary</h2><p><strong>Total:</strong> \" + $json.total + \"</p><p><strong>\u2705 Passed:</strong> \" + $json.passed + \"</p><p><strong>\u274c Failed:</strong> \" + $json.failed + \"</p><p><strong>Success Rate:</strong> \" + $json.successRate + \"</p><p><strong>Duration:</strong> \" + $json.totalDuration + \"</p></body></html>\" }}"
+            },
+            "id": "gmail_summary",
+            "name": "Gmail Summary",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1950,
+                250
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Select Product",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Product": {
+            "main": [
+                [
+                    {
+                        "node": "Find Product Test Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Find Product Test Files": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Test Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Generate Summary Report",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Test": {
+            "main": [
+                [
+                    {
+                        "node": "Google Chat Notification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Result & Check Failure": {
+            "main": [
+                [
+                    {
+                        "node": "If Failed",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "If Failed": {
+            "main": [
+                [
+                    {
+                        "node": "Log Failure to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Log Failure to File": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gmail Alert": {
+            "main": [
+                [
+                    {
+                        "node": "Test Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Summary Report": {
+            "main": [
+                [
+                    {
+                        "node": "Check If Results Exist",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check If Results Exist": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Google Chat Summary",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Gmail Summary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Chat Notification": {
+            "main": [
+                [
+                    {
+                        "node": "Save Result & Check Failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

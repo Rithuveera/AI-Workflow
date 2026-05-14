@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Hero Mockup</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --bg: #020617;
+            --primary: #06b6d4;
+            --secondary: #6366f1;
+            --accent: #d946ef;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .hero-container {
+            width: 1200px;
+            height: 675px;
+            /* LinkedIn 16:9 ratio */
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            box-sizing: border-box;
+        }
+
+        /* Ambient Glows */
+        .glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        .glow-1 {
+            background: var(--primary);
+            top: -200px;
+            left: -100px;
+        }
+
+        .glow-2 {
+            background: var(--secondary);
+            bottom: -100px;
+            right: -100px;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 1;
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            margin-bottom: 40px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--primary);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin: 0;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+
+        /* The Mockup Frame */
+        .screenshot-frame {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            flex-grow: 1;
+            background: #1e293b;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .window-controls {
+            height: 40px;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ff5f56;
+        }
+
+        .yellow {
+            background: #ffbd2e;
+        }
+
+        .green {
+            background: #27c93f;
+        }
+
+        .screenshot-placeholder {
+            width: 100%;
+            height: 100%;
+            background-image: url('workflow_screenshot.png');
+            /* USER: Save your screenshot with this name */
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .placeholder-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+
+        .tech-stats {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 20;
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-badge {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-icon {
+            color: var(--primary);
+        }
+
+        .stat-text {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #64748b;
+            font-size: 14px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hero-container">
+        <div class="grid-overlay"></div>
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+
+        <div class="header">
+            <div class="badge">n8n Engine Core</div>
+            <h1>Autonomous Playwright Pipeline</h1>
+        </div>
+
+        <div class="screenshot-frame">
+            <div class="window-controls">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+                <div style="margin-left: 20px; color: #475569; font-size: 12px; font-family: 'Fira Code';">
+                    workflow.n8n.cloud</div>
+            </div>
+            <div class="screenshot-placeholder">
+                <!-- If the user hasn't saved the file yet, they will see this -->
+                <div class="placeholder-overlay">
+                    [ Place workflow_screenshot.png here ]
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-stats">
+            <div class="stat-badge">
+                <span class="stat-icon">⚡</span>
+                <span class="stat-text">Dual-Triggered</span>
+            </div>
+            <div class="stat-badge">
+                <span class="stat-icon">🛡️</span>
+                <span class="stat-text">Self-Healing</span>
+            </div>
+            <div class="stat-badge">
+                <span class="stat-icon">📊</span>
+                <span class="stat-text">Omnichannel Reports</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>Engine Version: 2.4.0-Stable</div>
+            <div>Connectivity: Google Chat & Gmail Enabled</div>
+        </div>
+    </div>
+</body>
+
+</html>

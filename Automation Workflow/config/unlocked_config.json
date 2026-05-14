@@ -1,0 +1,10 @@
+{
+    "nodes": {
+        "command": {
+            "executionEnabled": true
+        }
+    },
+    "executions": {
+        "process": "main"
+    }
+}

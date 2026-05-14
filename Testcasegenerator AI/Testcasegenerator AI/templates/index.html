@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case10X - AI Test Case Generator</title>
+    <meta name="description"
+        content="Automatically generate comprehensive test cases from requirement documents using Google Gemini AI">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <img src="{{ url_for('static', filename='images/logo_icon.png') }}" alt="Case10X Logo"
+                        class="logo-img">
+                    Case10X
+                </h1>
+                <p class="tagline">10X Your Testing Efficiency with AI</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="upload-card">
+                    <div class="upload-header">
+                        <h2>Upload Requirement Document</h2>
+                        <p>Upload your requirement document and let AI generate comprehensive test cases automatically
+                        </p>
+                    </div>
+
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📄</div>
+                        <h3>Drag & Drop your file here</h3>
+                        <p>or click to browse</p>
+                        <p class="file-types">Supported: PDF, DOCX, TXT (Max 16MB)</p>
+                        <input type="file" id="fileInput" accept=".pdf,.docx,.txt" hidden>
+                        <button class="btn btn-primary" id="browseBtn">Browse Files</button>
+                    </div>
+
+                    <div class="selected-file" id="selectedFile" style="display: none;">
+                        <div class="file-info">
+                            <span class="file-icon">📎</span>
+                            <span class="file-name" id="fileName"></span>
+                            <button class="btn-remove" id="removeFileBtn">✕</button>
+                        </div>
+                        <button class="btn btn-success" id="generateBtn">
+                            <span class="btn-icon">✨</span>
+                            Generate Test Cases with AI
+                        </button>
+                    </div>
+
+                    <div class="loading" id="loadingIndicator" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>AI is analyzing your requirements and generating test cases...</p>
+                        <p class="loading-subtext">This may take 10-30 seconds</p>
+                    </div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="stats-grid" id="statsSection" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <h3 id="totalTestCases">0</h3>
+                            <p>Total Test Cases</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-functional">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-content">
+                            <h3 id="functionalCount">0</h3>
+                            <p>Functional Tests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-nonfunctional">
+                        <div class="stat-icon">🔒</div>
+                        <div class="stat-content">
+                            <h3 id="nonFunctionalCount">0</h3>
+                            <p>Non-Functional Tests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔴</div>
+                        <div class="stat-content">
+                            <h3 id="highPriority">0</h3>
+                            <p>High Priority</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Type Breakdown -->
+                <div class="type-breakdown" id="typeBreakdown" style="display: none;">
+                    <h3>Test Type Distribution</h3>
+                    <div class="type-stats-grid">
+                        <div class="type-stat" id="performanceStat">
+                            <span class="type-badge badge-performance">⚡ Performance</span>
+                            <span class="type-count" id="performanceCount">0</span>
+                        </div>
+                        <div class="type-stat" id="securityStat">
+                            <span class="type-badge badge-security">🔐 Security</span>
+                            <span class="type-count" id="securityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="usabilityStat">
+                            <span class="type-badge badge-usability">👤 Usability</span>
+                            <span class="type-count" id="usabilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="reliabilityStat">
+                            <span class="type-badge badge-reliability">🛡️ Reliability</span>
+                            <span class="type-count" id="reliabilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="compatibilityStat">
+                            <span class="type-badge badge-compatibility">🔄 Compatibility</span>
+                            <span class="type-count" id="compatibilityCount">0</span>
+                        </div>
+                        <div class="type-stat" id="maintainabilityStat">
+                            <span class="type-badge badge-maintainability">🔧 Maintainability</span>
+                            <span class="type-count" id="maintainabilityCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Test Cases Section -->
+            <section class="test-cases-section" id="testCasesSection" style="display: none;">
+                <div class="section-header">
+                    <h2>Generated Test Cases</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="exportBtn">
+                            <span class="btn-icon">📥</span>
+                            Export to Excel
+                        </button>
+                        <button class="btn btn-outline" id="refreshBtn">
+                            <span class="btn-icon">🗑️</span>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="filter-buttons" id="filterButtons" style="display: none;">
+                    <button class="filter-btn active" data-filter="all">All Tests</button>
+                    <button class="filter-btn" data-filter="Functional">⚙️ Functional</button>
+                    <button class="filter-btn" data-filter="Performance">⚡ Performance</button>
+                    <button class="filter-btn" data-filter="Security">🔐 Security</button>
+                    <button class="filter-btn" data-filter="Usability">👤 Usability</button>
+                    <button class="filter-btn" data-filter="Reliability">🛡️ Reliability</button>
+                    <button class="filter-btn" data-filter="Compatibility">🔄 Compatibility</button>
+                    <button class="filter-btn" data-filter="Maintainability">🔧 Maintainability</button>
+                </div>
+
+                <div class="test-cases-grid" id="testCasesGrid">
+                    <!-- Test cases will be dynamically inserted here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Test Case</h2>
+                <button class="modal-close" id="closeModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editTestCaseId">
+
+                    <div class="form-group">
+                        <label for="editTestCaseName">Test Case Name *</label>
+                        <input type="text" id="editTestCaseName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDescription">Description</label>
+                        <textarea id="editDescription" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editPriority">Priority *</label>
+                            <select id="editPriority" required>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editTestType">Test Type *</label>
+                            <select id="editTestType" required>
+                                <option value="Functional">Functional</option>
+                                <option value="Integration">Integration</option>
+                                <option value="Performance">Performance</option>
+                                <option value="Security">Security</option>
+                                <option value="Usability">Usability</option>
+                                <option value="Regression">Regression</option>
+                                <option value="Reliability">Reliability</option>
+                                <option value="Compatibility">Compatibility</option>
+                                <option value="Maintainability">Maintainability</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPreconditions">Preconditions</label>
+                        <textarea id="editPreconditions" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editTestSteps">Test Steps *</label>
+                        <textarea id="editTestSteps" rows="5" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editExpectedResult">Expected Result *</label>
+                        <textarea id="editExpectedResult" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

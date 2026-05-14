@@ -1,0 +1,210 @@
+{
+    "name": "Playwright - Individual Case Failure Reporter",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// SELECT THE SPECIFIC FILE TO TEST\n// This workflow will report EACH failed test case individually via email.\nreturn [{\n  json: {\n    product: 'ERP',\n    folder: 'ERP',\n    filename: 'ProjectDashboard.spec.js',\n    testPath: 'tests/ERP/ProjectDashboard.spec.js'\n  }\n}];"
+            },
+            "id": "single_file",
+            "name": "Select Test File",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const { execSync } = require('child_process');\nconst item = $input.item.json;\n\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\nconst testPath = item.testPath;\nconst cmd = `npx playwright test \"${testPath}\" --reporter=json`;\n\nconst startTime = new Date();\nlet stdout = '';\nlet stderr = '';\nlet exitCode = 0;\n\ntry {\n  stdout = execSync(cmd, { cwd, stdio: 'pipe', timeout: 300000 }).toString();\n} catch (e) {\n  exitCode = e.status || 1;\n  stdout = (e.stdout || '').toString();\n  stderr = (e.stderr || e.message || '').toString();\n}\n\nconst endTime = new Date();\nconst duration = ((endTime - startTime) / 1000).toFixed(2);\n\nreturn {\n  json: {\n    ...item,\n    exitCode: exitCode,\n    rawStdout: stdout,\n    stderr: (stderr || '').substring(0, 1000),\n    status: exitCode === 0 ? 'passed' : 'failed',\n    duration: `${duration}s`,\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "id": "run_test",
+            "name": "Run Playwright Test",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.item.json;\nconst stdout = item.rawStdout;\nconst cwd = 'C:/Users/veeramani/desktop/playwright-mcp';\nlet failures = [];\n\ntry {\n  const jsonMatch = stdout.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const jsonData = JSON.parse(jsonMatch[0]);\n    \n    function processSuite(suite, parents = []) {\n      const suiteTitle = parents.concat(suite.title || []).filter(t => t);\n      \n      if (suite.specs) {\n        suite.specs.forEach(spec => {\n          const specTitle = suiteTitle.concat(spec.title).join(' > ');\n          spec.tests.forEach(test => {\n            const results = test.results || [];\n            // Check if any result in the test was a failure\n            const failedResult = results.find(r => r.status === 'failed');\n            if (failedResult) {\n               const screenshot = (failedResult.attachments || []).find(a => a.name === 'screenshot');\n               failures.push({\n                   filename: item.filename,\n                   testTitle: specTitle,\n                   status: 'failed',\n                   error: failedResult.errors && failedResult.errors.length > 0 \n                       ? failedResult.errors.map(e => e.message || e.stack).join('\\n\\n') \n                       : (failedResult.error ? failedResult.error.message : 'Unknown error'),\n                   screenshotPath: screenshot ? (screenshot.path.includes(':') || screenshot.path.startsWith('/') ? screenshot.path : `${cwd}/${screenshot.path}`).replace(/\\\\/g, '/') : null,\n                   duration: (failedResult.duration / 1000).toFixed(2) + 's'\n               });\n            }\n          });\n        });\n      }\n      \n      if (suite.suites) {\n        suite.suites.forEach(s => processSuite(s, suiteTitle));\n      }\n    }\n    \n    if (jsonData.suites) {\n      jsonData.suites.forEach(s => processSuite(s));\n    }\n  }\n} catch (e) {\n  if (item.status === 'failed' && failures.length === 0) {\n    failures.push({\n        filename: item.filename,\n        testTitle: 'Test Execution Error',\n        status: 'failed',\n        error: item.stderr || 'Failed to parse playwright output',\n        screenshotPath: null,\n        duration: item.duration\n    });\n  }\n}\n\nreturn failures.map(f => ({ json: f }));"
+            },
+            "id": "split_failures",
+            "name": "Split Case Failures",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                750,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{ $json.screenshotPath }}",
+                            "operation": "notEqual",
+                            "value2": ""
+                        }
+                    ]
+                }
+            },
+            "id": "has_screenshot",
+            "name": "Has Screenshot?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1000,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "fileSelector": "={{ $json.screenshotPath }}",
+                "options": {
+                    "continueOnFail": true
+                }
+            },
+            "id": "read_screenshot",
+            "name": "Read Screenshot",
+            "type": "n8n-nodes-base.readBinaryFile",
+            "typeVersion": 1,
+            "position": [
+                1250,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '❌ Case Failed: ' + $json.testTitle + ' (' + $json.filename + ')' }}",
+                "emailType": "html",
+                "message": "={{ \"<html><body style='font-family: Arial, sans-serif;'><h2 style='color: #d32f2f;'>🚨 Test Case Failure Alert</h2><div style='background: #ffebee; padding: 15px; border-radius: 8px;'><p><b>Test File:</b> \" + $json.filename + \"</p><p><b>Case Title:</b> \" + $json.testTitle + \"</p><p><b>Status:</b> ❌ FAILED</p><p><b>Duration:</b> \" + $json.duration + \"</p></div><h3 style='color: #333;'>Error Details:</h3><pre style='background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;'>\" + ($json.error || 'No error details recorded.') + \"</pre><p style='font-size: 12px; color: #666;'>Automated report from Playwright Test Suite</p></body></html>\" }}",
+                "attachmentsUi": {
+                    "attachmentsValues": [
+                        {
+                            "binaryPropertyName": "data"
+                        }
+                    ]
+                }
+            },
+            "id": "gmail_case_alert_with_image",
+            "name": "Gmail Individual Alert",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1500,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "send",
+                "email": "veeramani.b@algosium.com",
+                "subject": "={{ '❌ Case Failed: ' + $json.testTitle + ' (' + $json.filename + ')' }}",
+                "emailType": "html",
+                "message": "={{ \"<html><body style='font-family: Arial, sans-serif;'><h2 style='color: #d32f2f;'>🚨 Test Case Failure Alert</h2><div style='background: #ffebee; padding: 15px; border-radius: 8px;'><p><b>Test File:</b> \" + $json.filename + \"</p><p><b>Case Title:</b> \" + $json.testTitle + \"</p><p><b>Status:</b> ❌ FAILED</p><p><b>Duration:</b> \" + $json.duration + \"</p></div><h3 style='color: #333;'>Error Details:</h3><pre style='background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;'>\" + ($json.error || 'No error details recorded.') + \"</pre><p style='font-size: 12px; color: #666;'>Automated report from Playwright Test Suite</p></body></html>\" }}"
+            },
+            "id": "gmail_case_alert_no_image",
+            "name": "Gmail Individual Alert (No Image)",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                1300,
+                450
+            ]
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Select Test File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Select Test File": {
+            "main": [
+                [
+                    {
+                        "node": "Run Playwright Test",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Run Playwright Test": {
+            "main": [
+                [
+                    {
+                        "node": "Split Case Failures",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Case Failures": {
+            "main": [
+                [
+                    {
+                        "node": "Has Screenshot?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Screenshot?": {
+            "main": [
+                [
+                    {
+                        "node": "Read Screenshot",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Gmail Individual Alert (No Image)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Read Screenshot": {
+            "main": [
+                [
+                    {
+                        "node": "Gmail Individual Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -1,0 +1,44 @@
+[
+    {
+        "chapter": "Introduction & Vision",
+        "timestamp": "0:00 - 1:00",
+        "voiceover": "Welcome to the future of security. In this deep dive, we're exploring SecValid AI—the world's first self-healing security scanner designed for the AI era. As cyber threats become more sophisticated, traditional tools are failing to bridge the gap between static patterns and complex logic. Today, we'll see how SecValid AI uses Google's Gemini 2.0 to redefine trust in software development.",
+        "visual": "Hero Animation & Title Sequence"
+    },
+    {
+        "chapter": "Chapter 1: The Core Architecture",
+        "timestamp": "1:00 - 2:30",
+        "voiceover": "At its heart, SecValid AI isn't just one tool; it's a modular ecosystem. We've built an orchestration layer that manages three distinct analysis streams simultaneously. This Hybrid Engine ensures we capture deterministic patterns with Regex while using Generative AI to understand the 'why' behind the code. Our infrastructure is designed for high-throughput security audits without sacrificing depth.",
+        "visual": "Interactive 3D Architecture Diagram"
+    },
+    {
+        "chapter": "Chapter 2: Deep Dive - OWASP Top 10",
+        "timestamp": "2:30 - 4:30",
+        "voiceover": "Let's talk about vulnerabilities. Our Core Scanner focuses on the OWASP Top 10, but with a twist. Instead of just looking for 'dangerouslySetInnerHTML', our AI analyzes the data flow. We'll look at an example where a simple user comment might lead to a Stored XSS attack. The AI traces the input from the form, through the database, to the final rendering, providing a remediation plan along the way.",
+        "visual": "Code Flow Trace Animation (SQLi/XSS)"
+    },
+    {
+        "chapter": "Chapter 3: Compliance & Legal Framework",
+        "timestamp": "4:30 - 6:00",
+        "voiceover": "Compliance is no longer optional. SecValid AI automates the tedious work of checking for GDPR, PCI-DSS, and HIPAA protocols. Does your site have a cookie banner? Is your Privacy Policy updated for 2026? Are your payment forms leaking raw data? We'll demonstrate how the scanner flags missing compliance markers in real-time, helping you avoid multi-million dollar fines.",
+        "visual": "Compliance Checklist & Audit View"
+    },
+    {
+        "chapter": "Chapter 4: API Security & Secrets",
+        "timestamp": "6:00 - 7:30",
+        "voiceover": "Hidden keys are a goldmine for hackers. Our API Security module scans bundles for AWS, Stripe, and Google API keys. But it doesn't stop there. It also maps out your entire API surface, detecting shadow APIs and unauthenticated endpoints that might be exposed to the public internet. Secure your infrastructure from the inside out.",
+        "visual": "Secret Detection & API Mapping"
+    },
+    {
+        "chapter": "Chapter 5: The 3-Tier Fallback System",
+        "timestamp": "7:30 - 9:00",
+        "voiceover": "One of our crowning achievements is the Self-Healing Fallback system. Rate limits and server outages are common in AI. SecValid AI solves this by automatically routing requests between Gemini 2.0 Flash, Gemini 1.5 Pro, and local models. In this segment, we'll simulate a 429 Quota Exceeded error and watch the system transparently recover without interrupting your scan.",
+        "visual": "Real-time Traffic Routing Animation"
+    },
+    {
+        "chapter": "Conclusion & Future Roadmap",
+        "timestamp": "9:00 - 10:00+",
+        "voiceover": "SecValid AI is more than a scanner; it's your partner in security. From consolidated risk scoring to automated PDF reporting, every feature is built to empower developers. Join us on this journey to make the web a safer place. Intelligence Validated. Subscribe for updates on our upcoming VS Code extension and CI/CD integrations.",
+        "visual": "Dashboard Summary & Call to Action"
+    }
+]
