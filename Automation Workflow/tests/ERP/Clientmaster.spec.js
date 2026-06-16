@@ -56,7 +56,7 @@ test('Client-Master - List page ', async ({ page }) => {
 });
 
 
-test('Client-Master - Add  ', async ({ page }) => {
+test.only('Client-Master - Add  ', async ({ page }) => {
   try {
 
 
@@ -111,31 +111,31 @@ test('Client-Master - Add  ', async ({ page }) => {
     await page.waitForTimeout(3000);
 
     //Enter the email value 
-    await page.locator('#emailid').fill(email);
-    console.log('Email entered:', email);
+     await page.locator('input[name="emailId"]').fill(email);
+     console.log('Email entered:', email);
 
     // Enter the Name
-    await page.locator('#name').fill(name);
+    await page.locator('input[name="clientName"]').fill(name);
     console.log('Name entered:', name);
 
     // Enter the Mobile 
-    await page.locator('#mobile').fill(mobile);
+    await page.locator('input[name="mobile"]').fill(mobile);
     console.log('Mobile entered:', mobile);
 
     // Enter the city 
-    await page.locator('#city').fill(city);
+    await page.locator('input[name="city"]').fill(city);
     console.log('City entered:', city);
     // Select the country 
-
-    await page.locator('#countryCode').selectOption('India');
-    await page.waitForTimeout(3000);
+    await page.getByPlaceholder('Select...').fill('India');
+    await page.getByText('India').click();
+  
     // Enter the address 
-    await page.locator('#address').fill(address);
+    await page.locator('textarea[name="address"]').fill('address');
     console.log('Address entered:', address);
 
 
     // Enter the contact number 
-    await page.locator('#contactNumber').fill(contactNumber);
+    await page.locator('input[name="contactNumber"]').fill(contactNumber);
     console.log('Contact Number entered:', contactNumber);
 
 

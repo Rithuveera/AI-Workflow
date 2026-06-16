@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test')
-  test("Closing - Awarded ",async({page})=>
+  test.only("Closing - Awarded ",async({page})=>
   {
   try {
     // Step 1: Navigate to the login page
@@ -56,7 +56,7 @@ const {test,expect}=require('@playwright/test')
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
     // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
     //Click Apply button to apply the filter
     await page.getByRole('button', { name: 'Apply' }).click();
@@ -65,7 +65,7 @@ const {test,expect}=require('@playwright/test')
      await page.waitForTimeout(1000);
 
     // Step 11: Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
     
     // Click Closing Icon 
@@ -73,8 +73,12 @@ const {test,expect}=require('@playwright/test')
     await page.waitForTimeout(3000); 
 
     // Select the status as awarded 
-      const selectedValue=await page.selectOption('#statuscheck', '3');
-      console.log(selectedValue); // Should print "3"
+      await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'Awarded' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
+
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -175,7 +179,7 @@ test("Enquiry Closing - Closed ",async({page})=>
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
    // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -185,16 +189,18 @@ test("Enquiry Closing - Closed ",async({page})=>
      await page.waitForTimeout(1000);
 
       // Step 11: Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
     // Click Closing Icon 
     await page.getByRole('button', { name: 'Closing' }).click();
     await page.waitForTimeout(3000);
 
      // Select the status as closed  
-      const selectedValue=await page.selectOption('#statuscheck', 'Closed');
-      console.log(selectedValue); // Should print "3"
-      console.log('Selected status is closed ') ;
+      await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E - Closed' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -276,7 +282,7 @@ test("Enquiry Closing - Lost ",async({page})=>
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
     // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -286,18 +292,19 @@ test("Enquiry Closing - Lost ",async({page})=>
      await page.waitForTimeout(1000);
 
      // Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
     await page.getByRole('button', { name: 'Closing' }).click();
     await page.waitForTimeout(3000);
 
-    // Select the status as awarded 
-      const selectedValue=await page.selectOption('#statuscheck', 'Lost');
-      console.log(selectedValue); // Should print "3"
-      console.log('Selected status is Lost ') ;
-
+    // Select the status as Lost 
+      await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'D - Lost' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
 
@@ -350,8 +357,6 @@ test("Enquiry Closing -Neglected  ",async({page})=>
     console.log('Already logged in, on dashboard page');
      // Step 2: Click on Enquiry menu icon to expand
     
-    // Step 4: Click on Enquiry menu icon to expand
-    
     console.log('Step 4: Expanding Enquiry menu...');
     await page.locator('img[src="/icons/Logo.svg"]').hover();
     await page.waitForTimeout(3000);
@@ -378,7 +383,7 @@ test("Enquiry Closing -Neglected  ",async({page})=>
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
    // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -388,16 +393,18 @@ test("Enquiry Closing -Neglected  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
     // Click Closing Icon 
     await page.getByRole('button', { name: 'Closing' }).click();
     await page.waitForTimeout(3000);
 
     // Select the status as Neglected 
-      const selectedValue=await page.selectOption('#statuscheck', 'Neglected');
-      console.log(selectedValue); // Should print "3"
-      console.log('Selected status is Neglected ') ;
+      await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E - Neglected' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -478,7 +485,7 @@ test("Enquiry Closing -Hold  ",async({page})=>
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
     // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);;
 
     //Click Apply button to apply the filter
@@ -488,7 +495,7 @@ test("Enquiry Closing -Hold  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
@@ -496,10 +503,11 @@ test("Enquiry Closing -Hold  ",async({page})=>
     await page.waitForTimeout(3000);
 
     // Select the status as Hold 
-      const selectedValue=await page.selectOption('#statuscheck', 'Hold');
-      console.log(selectedValue); 
-      console.log('Selected status is Hold ') ;
-
+      await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'C - Hold' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
 
@@ -580,7 +588,7 @@ test("Enquiry Closing - Cancelled  ",async({page})=>
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
     // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -590,7 +598,7 @@ test("Enquiry Closing - Cancelled  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
@@ -598,9 +606,11 @@ test("Enquiry Closing - Cancelled  ",async({page})=>
     await page.waitForTimeout(3000);
 
     // Select the status as Cancelled 
-      const selectedValue=await page.selectOption('#statuscheck', 'Cancelled');
-      console.log(selectedValue); 
-      console.log('Selected status is Cancelled ') ;
+       await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E - Cancelled' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -680,8 +690,8 @@ test("Enquiry Closing - Retender  ",async({page})=>
     // Click on Status filter to expand it
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
-    // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+    // Click on "Pending" status option
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -691,16 +701,18 @@ test("Enquiry Closing - Retender  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
     // Click Closing Icon 
     await page.getByRole('button', { name: 'Closing' }).click();
     await page.waitForTimeout(3000);
 
     // Select the status as Retender 
-      const selectedValue=await page.selectOption('#statuscheck', 'Retender');
-      console.log(selectedValue); 
-      console.log('Selected status is Retender ') ;
+       await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E - Retender' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -780,8 +792,8 @@ test("Enquiry Closing - Control Lost  ",async({page})=>
     // Click on Status filter to expand it
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
-// Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+// Click on "Pending" status option
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -791,7 +803,7 @@ test("Enquiry Closing - Control Lost  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
@@ -799,9 +811,11 @@ test("Enquiry Closing - Control Lost  ",async({page})=>
     await page.waitForTimeout(3000);
 
     // Select the status as Control Lost 
-      const selectedValue=await page.selectOption('#statuscheck', 'Control Lost');
-      console.log(selectedValue); 
-      console.log('Selected status is Control Lost ') ;
+       await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'F - Contr Lost' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
 
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
@@ -882,8 +896,8 @@ test("Enquiry Closing - Budgetary  ",async({page})=>
     // Click on Status filter to expand it
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
- // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+ // Click on "Pending" status option
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -893,7 +907,7 @@ test("Enquiry Closing - Budgetary  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
@@ -901,10 +915,11 @@ test("Enquiry Closing - Budgetary  ",async({page})=>
     await page.waitForTimeout(3000);
 
     // Select the status as Budgetary 
-      const selectedValue=await page.selectOption('#statuscheck', 'Budgetary');
-      console.log(selectedValue); 
-      console.log('Selected status is Budgetary ') ;
-
+       await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E-Budgetary' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
 
@@ -984,8 +999,8 @@ test("Enquiry Closing - Regretted  ",async({page})=>
     // Click on Status filter to expand it
     await page.locator('div').filter({ hasText: /^Status$/ }).nth(1).click();
 
-   // Click on "In Process "status option
-       await page.getByTitle('In Process').click();
+   // Click on "Pending" status option
+       await page.getByTitle('Pending').click();
        await page.waitForTimeout(1000);
 
     //Click Apply button to apply the filter
@@ -995,7 +1010,7 @@ test("Enquiry Closing - Regretted  ",async({page})=>
      await page.waitForTimeout(1000);
 
      //Click on the first enquiry in the list
-    await page.locator('table tbody tr').first().click();
+    await page.locator('table tbody tr').first().dblclick();
 
 
     // Click Closing Icon 
@@ -1003,10 +1018,11 @@ test("Enquiry Closing - Regretted  ",async({page})=>
     await page.waitForTimeout(3000);
 
     // Select the status as Regretted 
-      const selectedValue=await page.selectOption('#statuscheck', 'Regretted');
-      console.log(selectedValue); 
-      console.log('Selected status is Budgetary ') ;
-
+       await page.getByPlaceholder('Search priority...').click();
+      const option  =  page.locator('div.searchDropDownPagination_suggestion_item__PSEfn span').filter({ hasText: 'E - Regretted' });
+      const selectedValue=await option.innerText();
+      console.log('Selected vallue is :',selectedValue);
+      await option.click();
       // Enter the remarks 
       await page.fill('#remarks', 'This is my remark for the enquiry.');
 

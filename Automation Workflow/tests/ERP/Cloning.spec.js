@@ -124,7 +124,7 @@ test("Cloning", async ({ page }) => {
     await page.locator('input.sc-gEvDqW.hKYcdj').nth(1).click();
 
     // 2. Select date
-    await page.locator('div[aria-label="Choose Saturday, February 28th, 2026"]').click();
+    await page.locator('div[aria-label="Choose Saturday, June 28th, 2026"]').click();
 
     // // Click Save changes 
 
